@@ -1,4 +1,5 @@
-var crypto = require('crypto');
+var crypto  = require('crypto');
+var Q       = require('q');
 
 function getLatestSha(user, repoOwner, repoName, branch) {
 
@@ -30,27 +31,31 @@ var prepareHashInfo = function(repoOwner, repoName, branch, settings, user) {
     //no need to create a sha for every branch.
     //if we do use the dockerfile from the repo - we can't optimize, we have to build each time.
     //we need a sha for every branch.
-    var revisionMarkerPromise = useDockerfileFromRepo ?
-            getLatestSha(user, repoOwner, repoName, branch) :
-            Q(""); //jshint ignore:line
+    var revisionMarkerPromise = Q(''); //jshint ignore:line
+    if (useDockerfileFromRepo) {
+        revisionMarkerPromise = revisionMarkerPromise.then(function () {
+          return getLatestSha(user, repoOwner, repoName, branch);
+        });
+    }
 
-    return revisionMarkerPromise.then(function (revisionMarker) {
-        var hash = crypto.createHash('sha1');
-        hash.update(
-            JSON.stringify(build_sh) +
-            JSON.stringify(start_sh) +
-            JSON.stringify(useDockerfileFromRepo) +
-            revisionMarker);
+    return revisionMarkerPromise
+        .then(function (revisionMarker) {
+            var hash = crypto.createHash('sha1');
+            hash.update(
+                JSON.stringify(build_sh) +
+                JSON.stringify(start_sh) +
+                JSON.stringify(useDockerfileFromRepo) +
+                revisionMarker);
 
-        var buildHash = hash.digest('hex');
+            var buildHash = hash.digest('hex');
 
-        return {
-            build_sh: build_sh,
-            start_sh: start_sh,
-            hash: buildHash,
-            imageName: (repoOwner + '/' + repoName + ':' + buildHash).replace(/-/g, '_').toLowerCase()
-        };
-    });
+            return {
+                build_sh: build_sh,
+                start_sh: start_sh,
+                hash: buildHash,
+                imageName: (repoOwner + '/' + repoName + ':' + buildHash).replace(/-/g, '_').toLowerCase()
+            };
+        });
 };
 
 
