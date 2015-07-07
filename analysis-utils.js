@@ -16,12 +16,13 @@ function getLatestSha(user, repoOwner, repoName, branch) {
 
 var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings) {
 
-    return Q()
+    return Q() //jshint ignore:line
         .then(function () {
 
             var build_sh = "";
             var start_sh = "";
             var useDockerfileFromRepo = false;
+            var repo = (repoOwner + '/' + repoName).replace(/-/g, '_').toLowerCase();
 
             if (settings) {
                 build_sh = settings.build_sh || build_sh;
@@ -29,25 +30,34 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 useDockerfileFromRepo = settings.useDockerfileFromRepo;
             }
 
+            function calcHash(sha) {
+
+                var hash =
+                    crypto.createHash('sha1')
+                    .update(
+                        JSON.stringify(build_sh) +
+                        JSON.stringify(start_sh) +
+                        JSON.stringify(useDockerfileFromRepo) +
+                        sha)
+                    .digest('hex')
+                    .replace(/-/g, '_').toLowerCase();
+
+                return {
+                    build_sh: build_sh,
+                    start_sh: start_sh,
+                    hash: hash,
+                    repo: repo,
+                    imageName: repo + ':' + hash
+                };
+            }
+
+            var forRevision = calcHash(latestSha);
             //if we use customer dockerfile, we don't have an image per repo, we have an image per sha.
-            var revisionInfoIfRelevant = useDockerfileFromRepo ? latestSha : '';
-
-            var hash = crypto.createHash('sha1');
-            hash.update(
-                JSON.stringify(build_sh) +
-                JSON.stringify(start_sh) +
-                JSON.stringify(useDockerfileFromRepo) +
-                revisionInfoIfRelevant);
-
-            var buildHash = hash.digest('hex').replace(/-/g, '_').toLowerCase();
-            var repo = (repoOwner + '/' + repoName).replace(/-/g, '_').toLowerCase();
+            var forRepo = useDockerfileFromRepo ? withSha : calcHash('');
 
             return {
-                build_sh: build_sh,
-                start_sh: start_sh,
-                hash: buildHash,
-                repo: repo,
-                imageName: repo + ':' + buildHash
+                repo: forRepo,
+                revision: forRevision
             };
         });
 };
