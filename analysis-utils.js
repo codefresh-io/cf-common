@@ -47,13 +47,15 @@ var prepareHashInfo = function(repoOwner, repoName, branch, settings, user) {
                 JSON.stringify(useDockerfileFromRepo) +
                 revisionMarker);
 
-            var buildHash = hash.digest('hex');
+            var buildHash = hash.digest('hex').replace(/-/g, '_').toLowerCase();
+            var repo = (repoOwner + '/' + repoName).replace(/-/g, '_').toLowerCase();
 
             return {
                 build_sh: build_sh,
                 start_sh: start_sh,
                 hash: buildHash,
-                imageName: (repoOwner + '/' + repoName + ':' + buildHash).replace(/-/g, '_').toLowerCase()
+                repo: repo,
+                imageName: repo + ':' + buildHash
             };
         });
 };
