@@ -47,7 +47,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                     start_sh: start_sh,
                     hash: hash,
                     repo: repo,
-                    imageName: repo + ':' + buildHash
+                    imageName: repo + ':' + hash
                 };
             }
 
