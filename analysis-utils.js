@@ -53,7 +53,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
 
             var forRevision = calcHash(latestSha);
             //if we use customer dockerfile, we don't have an image per repo, we have an image per sha.
-            var forRepo = useDockerfileFromRepo ? withSha : calcHash('');
+            var forRepo = useDockerfileFromRepo ? forRevision : calcHash('');
 
             return {
                 repo: forRepo,
