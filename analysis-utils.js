@@ -38,6 +38,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                         JSON.stringify(build_sh) +
                         JSON.stringify(start_sh) +
                         JSON.stringify(useDockerfileFromRepo) +
+                        branch +
                         sha)
                     .digest('hex')
                     .replace(/-/g, '_').toLowerCase();
