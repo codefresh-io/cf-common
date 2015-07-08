@@ -43,8 +43,6 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                     .replace(/-/g, '_').toLowerCase();
 
                 return {
-                    build_sh: build_sh,
-                    start_sh: start_sh,
                     hash: hash,
                     repo: repo,
                     imageName: repo + ':' + hash
@@ -57,7 +55,9 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
 
             return {
                 repo: forRepo,
-                revision: forRevision
+                revision: forRevision,
+                build_sh: build_sh,
+                start_sh: start_sh,
             };
         });
 };
