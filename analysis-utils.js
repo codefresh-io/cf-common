@@ -38,7 +38,6 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                         JSON.stringify(build_sh) +
                         JSON.stringify(start_sh) +
                         JSON.stringify(useDockerfileFromRepo) +
-                        branch +
                         sha)
                     .digest('hex')
                     .replace(/-/g, '_').toLowerCase();
@@ -52,7 +51,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 };
             }
 
-            var forRevision = calcHash(latestSha);
+            var forRevision = calcHash(latestSha + branch);
             //if we use customer dockerfile, we don't have an image per repo, we have an image per sha.
             var forRepo = useDockerfileFromRepo ? forRevision : calcHash('');
 
