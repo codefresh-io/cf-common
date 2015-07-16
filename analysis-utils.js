@@ -3,15 +3,27 @@ var Q       = require('q');
 
 function getLatestSha(user, repoOwner, repoName, branch) {
 
-  console.log(new Date() + ': Get latest sha - started');
-
-  return user.provider.getCommits(repoOwner, repoName, branch, 1)
-    .then(function (commitInfo) {
-      console.log(new Date() + ': Get latest sha - ended - success');
-      return (commitInfo && commitInfo.length === 1) ?
-        commitInfo[0].sha :
-        branch;
+  return getLatestSha(user, repoOwner, repoName, branch)
+    .then(function (commit) {
+        if (commit === null) {
+            return branch;
+        }
+        else {
+            return commit.sha;
+        }
     });
+}
+
+function getLatestCommit(user, repoOwner, repoName, branch) {
+
+   console.log(new Date() + ': Get latest commit - started');
+
+   return user.provider.getCommits(repoOwner, repoName, branch, 1)
+       .then(function (commitInfo) {
+           console.log(new Date() + ': Get latest commit - ended - success');
+           return (commitInfo && commitInfo.length === 1) ?
+               commitInfo[0] : null;
+       });
 }
 
 var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings) {
@@ -65,5 +77,6 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
 
 module.exports = {
     prepareHashInfo: prepareHashInfo,
-    getLatestSha: getLatestSha
+    getLatestSha: getLatestSha,
+    getLatestCommit: getLatestCommit
 };
