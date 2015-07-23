@@ -3,27 +3,27 @@ var Q       = require('q');
 
 function getLatestSha(user, repoOwner, repoName, branch) {
 
-  return getLatestSha(user, repoOwner, repoName, branch)
-    .then(function (commit) {
-        if (commit === null) {
-            return branch;
-        }
-        else {
-            return commit.sha;
-        }
-    });
+    return getLatestSha(user, repoOwner, repoName, branch)
+        .then(function (commit) {
+            if (commit === null) {
+                return branch;
+            }
+            else {
+                return commit.sha;
+            }
+        });
 }
 
 function getLatestCommit(user, repoOwner, repoName, branch) {
 
-   console.log(new Date() + ': Get latest commit - started');
+    console.log(new Date() + ': Get latest commit - started');
 
-   return user.provider.getCommits(repoOwner, repoName, branch, 1)
-       .then(function (commitInfo) {
-           console.log(new Date() + ': Get latest commit - ended - success');
-           return (commitInfo && commitInfo.length === 1) ?
-               commitInfo[0] : null;
-       });
+    return user.provider.getCommits(repoOwner, repoName, branch, 1)
+        .then(function (commitInfo) {
+            console.log(new Date() + ': Get latest commit - ended - success');
+            return (commitInfo && commitInfo.length === 1) ?
+                commitInfo[0] : null;
+        });
 }
 
 var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings) {
@@ -33,12 +33,16 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
 
             var build_sh = "";
             var start_sh = "";
+            var test_sh = "";
+            var deploy_sh = "";
             var useDockerfileFromRepo = false;
             var repo = (repoOwner + '/' + repoName).replace(/-/g, '_').toLowerCase();
 
             if (settings) {
                 build_sh = settings.build_sh || build_sh;
                 start_sh = settings.start_sh || start_sh;
+                test_sh = settings.test_sh || test_sh;
+                deploy_sh = settings.deploy_sh || deploy_sh;
                 useDockerfileFromRepo = settings.useDockerfileFromRepo;
             }
 
@@ -46,13 +50,15 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
 
                 var hash =
                     crypto.createHash('sha1')
-                    .update(
+                        .update(
                         JSON.stringify(build_sh) +
                         JSON.stringify(start_sh) +
+                        JSON.stringify(test_sh) +
+                        JSON.stringify(deploy_sh) +
                         JSON.stringify(useDockerfileFromRepo) +
                         sha)
-                    .digest('hex')
-                    .replace(/-/g, '_').toLowerCase();
+                        .digest('hex')
+                        .replace(/-/g, '_').toLowerCase();
 
                 return {
                     hash: hash,
@@ -70,6 +76,8 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 revision: forRevision,
                 build_sh: build_sh,
                 start_sh: start_sh,
+                test_sh: test_sh,
+                deploy_sh: deploy_sh
             };
         });
 };
