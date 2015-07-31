@@ -1,5 +1,6 @@
 var crypto  = require('crypto');
 var Q       = require('q');
+var _       = require('lodash');
 
 function getLatestSha(user, repoOwner, repoName, branch) {
 
@@ -56,7 +57,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                         JSON.stringify(test_sh) +
                         JSON.stringify(deploy_sh) +
                         JSON.stringify(useDockerfileFromRepo) +
-                        JSON.stringify(settings.templateName || "") +
+                        JSON.stringify(_.get(settings, 'template.value', '')) +
                         sha)
                         .digest('hex')
                         .replace(/-/g, '_').toLowerCase();
