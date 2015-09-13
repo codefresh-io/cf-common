@@ -1,5 +1,6 @@
 var crypto  = require('crypto');
 var Q       = require('q');
+var _       = require('lodash');
 
 function getLatestSha(user, repoOwner, repoName, branch) {
 
@@ -36,7 +37,9 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
             var test_sh = "";
             var deploy_sh = "";
             var useDockerfileFromRepo = false;
-            var repo = (repoOwner + '/' + repoName).replace(/-/g, '_').toLowerCase();
+
+            var imageName = settings.imageName || repoOwner + '/' + repoName;
+            var repo = imageName.replace(/-/g, '_').toLowerCase();
 
             if (settings) {
                 build_sh = settings.build_sh || build_sh;
@@ -53,9 +56,8 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                         .update(
                         JSON.stringify(build_sh) +
                         JSON.stringify(start_sh) +
-                        JSON.stringify(test_sh) +
-                        JSON.stringify(deploy_sh) +
                         JSON.stringify(useDockerfileFromRepo) +
+                        JSON.stringify(_.get(settings, 'template.value', '')) +
                         sha)
                         .digest('hex')
                         .replace(/-/g, '_').toLowerCase();
@@ -67,9 +69,14 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 };
             }
 
+            var hashInfo = calcHash('');
             var forRevision = calcHash(latestSha + branch);
-            //if we use customer dockerfile, we don't have an image per repo, we have an image per sha.
-            var forRepo = useDockerfileFromRepo ? forRevision : calcHash('');
+
+            var forRepo = {
+                hash: hashInfo.hash,
+                repo: repo,
+                imageName: repo + ':' + branch
+            };
 
             return {
                 repo: forRepo,
