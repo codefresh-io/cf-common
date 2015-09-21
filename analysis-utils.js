@@ -39,7 +39,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
             var useDockerfileFromRepo = false;
 
             var imageName = settings.imageName || repoOwner + '/' + repoName;
-            var repo = imageName.replace(/-/g, '_').toLowerCase();
+            var repo = imageName.toLowerCase();
 
             if (settings) {
                 build_sh = settings.build_sh || build_sh;
