@@ -69,11 +69,10 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 };
             }
 
-            var hashInfo = calcHash('');
             var forRevision = calcHash(latestSha + branch);
 
             var forRepo = {
-                hash: hashInfo.hash,
+                hash: forRevision.hash,
                 repo: repo,
                 imageName: repo + ':' + branch
             };
