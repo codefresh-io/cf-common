@@ -27,7 +27,7 @@ function getLatestCommit(user, repoOwner, repoName, branch) {
         });
 }
 
-var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings) {
+var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings, userId) {
 
     return Q() //jshint ignore:line
         .then(function () {
@@ -77,9 +77,17 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings)
                 imageName: repo + ':' + branch
             };
 
+            var forUserSpecificFull = {
+                hash: forRevision.hash,
+                repo: repo,
+                userId: userId,
+                imageName: repo + ':' + forRevision.hash + "-" + userId
+            };
+
             return {
                 repo: forRepo,
                 revision: forRevision,
+                userSpecificFull: forUserSpecificFull,
                 build_sh: build_sh,
                 start_sh: start_sh,
                 test_sh: test_sh,
