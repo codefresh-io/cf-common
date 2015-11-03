@@ -89,10 +89,19 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             };
             forUserSpecificFull.imageName = forUserSpecificFull.repo + ":" + forUserSpecificFull.tag;
 
+            var forUserSpecificCi = {
+                hash: forRevision.hash,
+                repo: repo,
+                tag: forRevision.hash + "-CI-" + userId,
+                userId: userId
+            };
+            forUserSpecificCi.imageName = forUserSpecificCi.repo + ":" + forUserSpecificCi.tag;
+
             return {
                 repo: forRepo,
                 revision: forRevision,
                 userSpecificFull: forUserSpecificFull,
+                userSpecificCi: forUserSpecificCi,
                 build_sh: build_sh,
                 start_sh: start_sh,
                 test_sh: test_sh,
