@@ -52,21 +52,23 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             function calcHash(sha) {
 
                 var hash =
-                    crypto.createHash('sha1')
-                        .update(
-                        JSON.stringify(build_sh) +
-                        JSON.stringify(start_sh) +
-                        JSON.stringify(useDockerfileFromRepo) +
-                        JSON.stringify(_.get(settings, 'template.value', '')) +
-                        sha)
-                        .digest('hex')
-                        .replace(/-/g, '_').toLowerCase();
+                        crypto.createHash('sha1')
+                            .update(
+                            JSON.stringify(build_sh) +
+                            JSON.stringify(start_sh) +
+                            JSON.stringify(useDockerfileFromRepo) +
+                            JSON.stringify(_.get(settings, 'template.value', '')) +
+                            sha)
+                            .digest('hex')
+                            .replace(/-/g, '_').toLowerCase();
 
-                return {
+                var res = {
                     hash: hash,
                     repo: repo,
-                    imageName: repo + ':' + hash
+                    tag: hash
                 };
+                res.imageName = res.repo + ":" + res.tag;
+                return res;
             }
 
             var forRevision = calcHash(latestSha + branch);
@@ -74,20 +76,32 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var forRepo = {
                 hash: forRevision.hash,
                 repo: repo,
-                imageName: repo + ':' + branch
+                tag: branch.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]/, "")
             };
+            forRepo.imageName = forRepo.repo + ':' + forRepo.tag;
+
 
             var forUserSpecificFull = {
                 hash: forRevision.hash,
                 repo: repo,
-                userId: userId,
-                imageName: repo + ':' + forRevision.hash + "-" + userId
+                tag: forRevision.hash + "-" + userId,
+                userId: userId
             };
+            forUserSpecificFull.imageName = forUserSpecificFull.repo + ":" + forUserSpecificFull.tag;
+
+            var forUserSpecificCi = {
+                hash: forRevision.hash,
+                repo: repo,
+                tag: forRevision.hash + "-CI-" + userId,
+                userId: userId
+            };
+            forUserSpecificCi.imageName = forUserSpecificCi.repo + ":" + forUserSpecificCi.tag;
 
             return {
                 repo: forRepo,
                 revision: forRevision,
                 userSpecificFull: forUserSpecificFull,
+                userSpecificCi: forUserSpecificCi,
                 build_sh: build_sh,
                 start_sh: start_sh,
                 test_sh: test_sh,
