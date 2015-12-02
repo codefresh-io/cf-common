@@ -43,9 +43,17 @@ describe('prepareHashInfo', function () {
                             userId: 'userId',
                             imageName: 'owner/name:8c71c47bcdc3d21a8c45027a6e07737015db8945-userId'
                         },
+                        "userSpecificCi": {
+                            "hash": "8c71c47bcdc3d21a8c45027a6e07737015db8945",
+                            "imageName": "owner/name:8c71c47bcdc3d21a8c45027a6e07737015db8945-CI-userId",
+                            "repo": "owner/name",
+                            "tag": "8c71c47bcdc3d21a8c45027a6e07737015db8945-CI-userId",
+                            "userId": "userId"
+                        },
                         build_sh: 'build',
                         start_sh: 'start',
                         test_sh: 'test',
+                        integ_sh: '',
                         deploy_sh: 'deploy'
                     };
 
