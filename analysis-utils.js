@@ -36,6 +36,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var start_sh = "";
             var test_sh = "";
             var deploy_sh = "";
+            var integ_sh = "";
             var useDockerfileFromRepo = false;
 
             var imageName = settings.imageName || repoOwner + '/' + repoName;
@@ -46,6 +47,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
                 start_sh = settings.start_sh || start_sh;
                 test_sh = settings.test_sh || test_sh;
                 deploy_sh = settings.deploy_sh || deploy_sh;
+                integ_sh = settings.integ_sh || integ_sh;
                 useDockerfileFromRepo = settings.useDockerfileFromRepo;
             }
 
@@ -105,7 +107,8 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
                 build_sh: build_sh,
                 start_sh: start_sh,
                 test_sh: test_sh,
-                deploy_sh: deploy_sh
+                deploy_sh: deploy_sh,
+                integ_sh: integ_sh
             };
         });
 };
