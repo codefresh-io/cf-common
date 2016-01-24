@@ -27,7 +27,7 @@ function getLatestCommit(user, repoOwner, repoName, branch) {
         });
 }
 
-var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings, userId, extra) {
+var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings, userId) {
 
     return Q() //jshint ignore:line
         .then(function () {
@@ -53,18 +53,16 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
 
             function calcHash(sha) {
 
-                var hashData = JSON.stringify(build_sh) +
-                    JSON.stringify(start_sh) +
-                    JSON.stringify(useDockerfileFromRepo) +
-                    JSON.stringify(_.get(settings, 'template.value', '')) +
-                    (extra ? JSON.stringify(extra) : '') +
-                    sha;
-
                 var hash =
-                    crypto.createHash('sha1')
-                        .update(hashData)
-                        .digest('hex')
-                        .replace(/-/g, '_').toLowerCase();
+                        crypto.createHash('sha1')
+                            .update(
+                            JSON.stringify(build_sh) +
+                            JSON.stringify(start_sh) +
+                            JSON.stringify(useDockerfileFromRepo) +
+                            JSON.stringify(_.get(settings, 'template.value', '')) +
+                            sha)
+                            .digest('hex')
+                            .replace(/-/g, '_').toLowerCase();
 
                 var res = {
                     hash: hash,
