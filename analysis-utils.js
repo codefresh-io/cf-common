@@ -27,7 +27,7 @@ function getLatestCommit(user, repoOwner, repoName, branch) {
         });
 }
 
-var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings, userId) {
+var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings, userId, extra) {
 
     return Q() //jshint ignore:line
         .then(function () {
@@ -36,6 +36,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var start_sh = "";
             var test_sh = "";
             var deploy_sh = "";
+            var integ_sh = "";
             var useDockerfileFromRepo = false;
 
             var imageName = settings.imageName || repoOwner + '/' + repoName;
@@ -46,27 +47,32 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
                 start_sh = settings.start_sh || start_sh;
                 test_sh = settings.test_sh || test_sh;
                 deploy_sh = settings.deploy_sh || deploy_sh;
+                integ_sh = settings.integ_sh || integ_sh;
                 useDockerfileFromRepo = settings.useDockerfileFromRepo;
             }
 
             function calcHash(sha) {
 
+                var hashData = JSON.stringify(build_sh) +
+                    JSON.stringify(start_sh) +
+                    JSON.stringify(useDockerfileFromRepo) +
+                    JSON.stringify(_.get(settings, 'template.value', '')) +
+                    (extra ? JSON.stringify(extra) : '') +
+                    sha;
+
                 var hash =
                     crypto.createHash('sha1')
-                        .update(
-                        JSON.stringify(build_sh) +
-                        JSON.stringify(start_sh) +
-                        JSON.stringify(useDockerfileFromRepo) +
-                        JSON.stringify(_.get(settings, 'template.value', '')) +
-                        sha)
+                        .update(hashData)
                         .digest('hex')
                         .replace(/-/g, '_').toLowerCase();
 
-                return {
+                var res = {
                     hash: hash,
                     repo: repo,
-                    imageName: repo + ':' + hash
+                    tag: hash
                 };
+                res.imageName = res.repo + ":" + res.tag;
+                return res;
             }
 
             var forRevision = calcHash(latestSha + branch);
@@ -74,24 +80,37 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var forRepo = {
                 hash: forRevision.hash,
                 repo: repo,
-                imageName: repo + ':' + branch
+                tag: branch.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]/, "")
             };
+            forRepo.imageName = forRepo.repo + ':' + forRepo.tag;
+
 
             var forUserSpecificFull = {
                 hash: forRevision.hash,
                 repo: repo,
-                userId: userId,
-                imageName: repo + ':' + forRevision.hash + "-" + userId
+                tag: forRevision.hash + "-" + userId,
+                userId: userId
             };
+            forUserSpecificFull.imageName = forUserSpecificFull.repo + ":" + forUserSpecificFull.tag;
+
+            var forUserSpecificCi = {
+                hash: forRevision.hash,
+                repo: repo,
+                tag: forRevision.hash + "-CI-" + userId,
+                userId: userId
+            };
+            forUserSpecificCi.imageName = forUserSpecificCi.repo + ":" + forUserSpecificCi.tag;
 
             return {
                 repo: forRepo,
                 revision: forRevision,
                 userSpecificFull: forUserSpecificFull,
+                userSpecificCi: forUserSpecificCi,
                 build_sh: build_sh,
                 start_sh: start_sh,
                 test_sh: test_sh,
-                deploy_sh: deploy_sh
+                deploy_sh: deploy_sh,
+                integ_sh: integ_sh
             };
         });
 };
