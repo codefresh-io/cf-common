@@ -32,8 +32,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
     return Q() //jshint ignore:line
         .then(function () {
 
-            var build_sh = "";
-            var start_sh = "";
+            var dockerFileContents = "";
             var test_sh = "";
             var deploy_sh = "";
             var integ_sh = "";
@@ -43,8 +42,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var repo = imageName.toLowerCase();
 
             if (settings) {
-                build_sh = settings.build_sh || build_sh;
-                start_sh = settings.start_sh || start_sh;
+                dockerFileContents = settings.dockerFileContents || dockerFileContents;
                 test_sh = settings.test_sh || test_sh;
                 deploy_sh = settings.deploy_sh || deploy_sh;
                 integ_sh = settings.integ_sh || integ_sh;
@@ -53,9 +51,9 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
 
             function calcHash(sha) {
 
-                var hashData = JSON.stringify(build_sh) +
-                    JSON.stringify(start_sh) +
+                var hashData =
                     JSON.stringify(useDockerfileFromRepo) +
+                    (useDockerfileFromRepo ? JSON.stringify(dockerFileContents) : '') +
                     JSON.stringify(_.get(settings, 'template.value', '')) +
                     (extra ? JSON.stringify(extra) : '') +
                     sha;
@@ -106,8 +104,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
                 revision: forRevision,
                 userSpecificFull: forUserSpecificFull,
                 userSpecificCi: forUserSpecificCi,
-                build_sh: build_sh,
-                start_sh: start_sh,
+                dockerFileContents: dockerFileContents,
                 test_sh: test_sh,
                 deploy_sh: deploy_sh,
                 integ_sh: integ_sh
