@@ -24,29 +24,29 @@ describe('prepareHashInfo', function () {
                 .then(function (res) {
                     var expectedRes = {
                         repo: {
-                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
+                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
                             repo: 'owner/name',
                             tag: 'branch',
                             imageName: 'owner/name:branch'
                         },
                         revision: {
-                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
+                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
                             repo: 'owner/name',
-                            tag: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
-                            imageName: 'owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26'
+                            tag: '4c1bbca29599290960a76b435bf7abc584da407c',
+                            imageName: 'owner/name:4c1bbca29599290960a76b435bf7abc584da407c'
                         },
                         userSpecificFull: {
-                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
+                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
                             repo: 'owner/name',
-                            tag: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26-userId',
+                            tag: '4c1bbca29599290960a76b435bf7abc584da407c-userId',
                             userId: 'userId',
-                            imageName: 'owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26-userId'
+                            imageName: 'owner/name:4c1bbca29599290960a76b435bf7abc584da407c-userId'
                         },
                         "userSpecificCi": {
-                            "hash": "d4e10ca1cc63c86fc8dc63126ddf229b81237a26",
-                            "imageName": "owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26-CI-userId",
+                            "hash": "4c1bbca29599290960a76b435bf7abc584da407c",
+                            "imageName": "owner/name:4c1bbca29599290960a76b435bf7abc584da407c-CI-userId",
                             "repo": "owner/name",
-                            "tag": "d4e10ca1cc63c86fc8dc63126ddf229b81237a26-CI-userId",
+                            "tag": "4c1bbca29599290960a76b435bf7abc584da407c-CI-userId",
                             "userId": "userId"
                         },
                         dockerFileContents: 'FROM jim/bob:version',
