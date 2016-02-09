@@ -14,8 +14,7 @@ describe('prepareHashInfo', function () {
         it('providing a valid branch name (in terms of docker image tag conventions) should keep it as original', function () {
 
             var settings = {
-                build_sh: "build",
-                start_sh: "start",
+                dockerFileContents: "FROM jim/bob:version",
                 test_sh: "test",
                 deploy_sh: "deploy",
                 userDockerFileFromRepo: true
@@ -25,34 +24,33 @@ describe('prepareHashInfo', function () {
                 .then(function (res) {
                     var expectedRes = {
                         repo: {
-                            hash: '8c71c47bcdc3d21a8c45027a6e07737015db8945',
+                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
                             repo: 'owner/name',
                             tag: 'branch',
                             imageName: 'owner/name:branch'
                         },
                         revision: {
-                            hash: '8c71c47bcdc3d21a8c45027a6e07737015db8945',
+                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
                             repo: 'owner/name',
-                            tag: '8c71c47bcdc3d21a8c45027a6e07737015db8945',
-                            imageName: 'owner/name:8c71c47bcdc3d21a8c45027a6e07737015db8945'
+                            tag: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
+                            imageName: 'owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26'
                         },
                         userSpecificFull: {
-                            hash: '8c71c47bcdc3d21a8c45027a6e07737015db8945',
+                            hash: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26',
                             repo: 'owner/name',
-                            tag: '8c71c47bcdc3d21a8c45027a6e07737015db8945-userId',
+                            tag: 'd4e10ca1cc63c86fc8dc63126ddf229b81237a26-userId',
                             userId: 'userId',
-                            imageName: 'owner/name:8c71c47bcdc3d21a8c45027a6e07737015db8945-userId'
+                            imageName: 'owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26-userId'
                         },
                         "userSpecificCi": {
-                            "hash": "8c71c47bcdc3d21a8c45027a6e07737015db8945",
-                            "imageName": "owner/name:8c71c47bcdc3d21a8c45027a6e07737015db8945-CI-userId",
+                            "hash": "d4e10ca1cc63c86fc8dc63126ddf229b81237a26",
+                            "imageName": "owner/name:d4e10ca1cc63c86fc8dc63126ddf229b81237a26-CI-userId",
                             "repo": "owner/name",
-                            "tag": "8c71c47bcdc3d21a8c45027a6e07737015db8945-CI-userId",
+                            "tag": "d4e10ca1cc63c86fc8dc63126ddf229b81237a26-CI-userId",
                             "userId": "userId"
                         },
-                        build_sh: 'build',
-                        start_sh: 'start',
-                        test_sh: 'test',
+                        dockerFileContents: 'FROM jim/bob:version',
+                        test_sh: "test",
                         integ_sh: '',
                         deploy_sh: 'deploy'
                     };
