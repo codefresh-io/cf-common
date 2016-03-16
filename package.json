@@ -25,10 +25,13 @@
     "q": "^1.1.2",
     "sinon-chai": "^2.8.0",
     "chai": "^1.9.2",
-    "shelljs": "^0.5.3"
+    "shelljs": "^0.5.3",
+    "firebase": "^2.4.1",
+    "cf-queue": "git+https://github.com/codefresh-io/cf-queue.git#58c4f3f5942e480826167d3199ff37ae5370757b"
   },
   "dependencies": {
     "crypto": "0.0.3",
+    "gulp-coveralls": "^0.1.4",
     "lodash": "^3.10.1",
     "q": "^1.4.1"
   }

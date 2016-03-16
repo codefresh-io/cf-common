@@ -5,6 +5,8 @@ var cover       = require('gulp-coverage');
 var rimraf      = require('gulp-rimraf');
 var env         = require('gulp-env');
 var runSequence = require('run-sequence');
+var fs          = require('fs');
+var coveralls   = require('gulp-coveralls');
 require('shelljs/global');
 
 
@@ -37,17 +39,17 @@ gulp.task('unit_pre', function () {
 		}))
 		.pipe(mocha({reporter: 'spec', timeout: '10000'}))
 		.pipe(cover.gather())
-		.pipe(cover.format( {
-			reporter: 'html',
-			outFile: 'coverage-unit.html'
-		}))
+		.pipe(cover.format([
+			{
+				reporter: 'lcov',
+				outFile: 'coverage-unit.info'
+			},
+			{
+				reporter: 'html',
+				outFile: 'coverage-unit.html'
+			}
+		]))
 		.pipe(gulp.dest('coverage'))
-		.pipe(cover.enforce( {
-			statements: 50,
-			blocks: 30,
-			lines: 50,
-			uncovered: undefined
-		}))
 		.once('error', function (err) {
 			console.error(err);
 			process.exit(1);
@@ -68,6 +70,24 @@ gulp.task('unit_test', function(callback) {
 	runSequence('set_unit_env_vars',
 		'unit_pre',
 		callback);
+});
+
+gulp.task('coveralls', function(callback){
+	var repo_token = process.env.COVERALLS_TOKEN;
+	if (!repo_token){
+		return callback(new Error("COVERALLS_TOKEN environment variable is missing"));
+	}
+	else {
+		fs.writeFile(".coveralls.yml", "service_name: codefresh-io\nrepo_token: " + repo_token, function(err){
+			if (err){
+				callback(err);
+			}
+			else {
+				gulp.src('coverage/coverage-unit.info')
+					.pipe(coveralls());
+			}
+		});
+	}
 });
 
 
