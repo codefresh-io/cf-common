@@ -8,37 +8,41 @@ chai.use(sinonChai);
 
 describe('taskLogger tests', function () {
 
-    var createMockLogger = function (requestSpy, childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy) {
+    var createMockFirebase = function (childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy) {
+        var Firebase = function(){
+            return {
+                child: childSpy || function () {
+                    return this;
+                },
+                set: setSpy || function () {
+                    return this;
+                },
+                push: pushSpy || function () {
+                    return this;
+                },
+                on: onSpy || function () {
+                    return this;
+                },
+                remove: removeSpy || function () {
+                    return this;
+                },
+                off: offSpy || function () {
+                    return this;
+                },
+                update: updateSpy || function () {
+                    return this;
+                }
+            }
+        };
+        return Firebase;
+    };
+
+    var createMockLogger = function (requestSpy) {
         var Logger = proxyquire('./taskLogger', {
             'cf-queue': function () {
                 return {
                     request: requestSpy || function () {
                         return Q.resolve();
-                    }
-                };
-            },
-            'firebase': function () {
-                return {
-                    child: childSpy || function () {
-                        return this;
-                    },
-                    set: setSpy || function () {
-                        return this;
-                    },
-                    push: pushSpy || function () {
-                        return this;
-                    },
-                    on: onSpy || function () {
-                        return this;
-                    },
-                    remove: removeSpy || function () {
-                        return this;
-                    },
-                    off: offSpy || function () {
-                        return this;
-                    },
-                    update: updateSpy || function () {
-                        return this;
                     }
                 };
             }
@@ -49,6 +53,7 @@ describe('taskLogger tests', function () {
     describe('1 create a new logger', function(){
 
         it('1.1 create a new logger', function () {
+            var Firebase = createMockFirebase();
             var Logger = createMockLogger();
             var logger = new Logger({
                 request: {
@@ -56,13 +61,14 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             expect(logger).to.exist; // jshint ignore:line
             expect(logger.create).to.exist; // jshint ignore:line
             expect(logger.finish).to.exist; // jshint ignore:line
         });
 
         it('1.2 create a new logger, a step and finish it', function () {
+            var Firebase = createMockFirebase();
             var Logger = createMockLogger();
             var logger = new Logger({
                 request: {
@@ -70,7 +76,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             logger.create("Step1");
             logger.finish();
         });
@@ -84,14 +90,15 @@ describe('taskLogger tests', function () {
             var removeSpy = sinon.spy(function(){
                 return this;
             });
-            var Logger     = createMockLogger(null, null, null, null, null, removeSpy, null);
+            var Firebase = createMockFirebase(null, null, null, null, removeSpy, null);
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
@@ -104,14 +111,15 @@ describe('taskLogger tests', function () {
         });
 
         it('2.2 creating the same step twice should not listen on the progress top-level status again', function () {
-            var Logger     = createMockLogger(null, null, null, null, null, null, null);
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
@@ -124,6 +132,7 @@ describe('taskLogger tests', function () {
         });
 
         it('2.3 creating the same step twice should not listen on the progress top-level status again', function () {
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger(null, null, null, null, null, null, null);
             var logger     = new Logger({
                 request: {
@@ -131,7 +140,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
@@ -168,14 +177,15 @@ describe('taskLogger tests', function () {
                 }, 1);
             });
 
-            var Logger     = createMockLogger(null, null, setSpy, null, onSpy, null, offSpy, updateSpy);
+            var Firebase = createMockFirebase(null, setSpy, null, onSpy, null, offSpy, updateSpy);
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             logger.create("step1");
 
         });
@@ -197,14 +207,15 @@ describe('taskLogger tests', function () {
                 }, 1);
             });
 
-            var Logger     = createMockLogger(null, null, setSpy, null, onSpy, null, offSpy);
+            var Firebase = createMockFirebase(null, setSpy, null, onSpy, null, offSpy);
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             logger.create("step1");
 
         });
@@ -226,14 +237,15 @@ describe('taskLogger tests', function () {
                 }, 1);
             });
 
-            var Logger     = createMockLogger(null, null, setSpy, null, onSpy, null, offSpy);
+            var Firebase = createMockFirebase(null, setSpy, null, onSpy, null, offSpy);
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             logger.create("step1");
 
         });
@@ -255,14 +267,15 @@ describe('taskLogger tests', function () {
                 }, 1);
             });
 
-            var Logger     = createMockLogger(null, null, setSpy, null, onSpy, null, offSpy);
+            var Firebase = createMockFirebase(null, setSpy, null, onSpy, null, offSpy);
+            var Logger     = createMockLogger(null);
             var logger     = new Logger({
                 request: {
                     context: {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             logger.create("step1");
 
         });
@@ -273,6 +286,7 @@ describe('taskLogger tests', function () {
 
         it('4.1 trigger write handler', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -280,7 +294,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.write("write message");
 
@@ -288,6 +302,7 @@ describe('taskLogger tests', function () {
 
         it('4.2 trigger debug handler', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -295,7 +310,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.debug("debug message");
 
@@ -303,6 +318,7 @@ describe('taskLogger tests', function () {
 
         it('4.3 trigger warning handler', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -310,7 +326,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.warning("warning message");
 
@@ -318,6 +334,7 @@ describe('taskLogger tests', function () {
 
         it('4.4 trigger info handler', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -325,7 +342,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.info("info message");
 
@@ -333,6 +350,7 @@ describe('taskLogger tests', function () {
 
         it('4.5 trigger error handler', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -340,7 +358,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.error("error message");
 
@@ -348,6 +366,7 @@ describe('taskLogger tests', function () {
 
         it('4.6 trigger finish handler without error', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -355,7 +374,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.finish();
 
@@ -363,6 +382,7 @@ describe('taskLogger tests', function () {
 
         it('4.7 trigger finish handler with error', function(){
 
+            var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger     = new Logger({
                 request: {
@@ -370,7 +390,7 @@ describe('taskLogger tests', function () {
                         progress_id: "progress_id"
                     }
                 }
-            });
+            }, null, Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.finish(new Error("step error"));
 

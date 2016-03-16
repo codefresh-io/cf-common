@@ -1,6 +1,5 @@
 var _        = require('lodash');
 var Queue    = require('cf-queue');
-var Firebase = require("firebase");
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -9,7 +8,7 @@ var Firebase = require("firebase");
  * @param queueConfig - optional. if passed will send the build-manager an event whenever a new step is created
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function(job, baseFirebaseUrl, queueConfig) {
+var TaskLogger = function(job, baseFirebaseUrl, Firebase, queueConfig) {
 
     var jobId = _.get(job, "request.context.progress_id");
 
