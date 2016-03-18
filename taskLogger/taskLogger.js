@@ -1,27 +1,44 @@
-var _        = require('lodash');
-var Queue    = require('cf-queue');
+var _            = require('lodash');
+var Queue        = require('cf-queue');
+var CFError      = require('cf-errors');
+var ErrorTypes   = CFError.errorTypes;
+var EventEmitter = require('events');
+var util         = require('util');
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
- * @param job - job metadata
+ * @param jobid - progress job id
+ * @param firstStepCreationTime - optional. if provided the first step creationTime will be this value
  * @param baseFirebaseUrl - baseFirebaseUrl (pre-quisite authentication to firebase should have been made)
- * @param queueConfig - optional. if passed will send the build-manager an event whenever a new step is created
+ * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
+ * @param queueConfig - sends the build-manager an event whenever a new step is created
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function(job, baseFirebaseUrl, Firebase, queueConfig) {
+var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, FirebaseLib, queueConfig) {
+    var self = this;
+    EventEmitter.call(self);
 
-    var jobId = _.get(job, "request.context.progress_id");
-
-    if (queueConfig){
-        var buildManagerQueue = new Queue('BuildManagerEventsQueue', queueConfig);
+    if (!jobId){
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+    }
+    else if (!baseFirebaseUrl){
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
+    }
+    else if (!FirebaseLib){
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
+    }
+    else if (!queueConfig){
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because queue configuration must be provided");
     }
 
-    var progressRef = new Firebase(baseFirebaseUrl + jobId);
+    var buildManagerQueue = new Queue('BuildManagerEventsQueue', queueConfig);
+
+    var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
 
     var steps = {};
     var handler;
 
-    var create = function(name) {
+    self.create = function(name) {
 
         var step = steps[name];
         if (!step) {
@@ -31,12 +48,13 @@ var TaskLogger = function(job, baseFirebaseUrl, Firebase, queueConfig) {
                 status: "running",
                 logs: {}
             };
-            steps[name] = step;
-            var stepRef = new Firebase(baseFirebaseUrl + jobId + "/steps");
-            step.firebaseRef = stepRef.push(step);
-            if (queueConfig){
-                buildManagerQueue.request({action:"new-progress-step", jobId: jobId, name: name}); //update build model
+            if (firstStepCreationTime && _.isEmpty({})){ // a workaround so api can provide the first step creation time from outside
+                step.creationTimeStamp = firstStepCreationTime;
             }
+            steps[name] = step;
+            var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
+            step.firebaseRef = stepRef.push(step);
+            buildManagerQueue.request({action:"new-progress-step", jobId: jobId, name: name}); //update build model
 
 
             progressRef.child("status").on("value", function(snapshot){ // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
@@ -61,62 +79,85 @@ var TaskLogger = function(job, baseFirebaseUrl, Firebase, queueConfig) {
 
         handler = {
             write: function(message) {
-                if (step.status !== "terminated"){
+                if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
+                else if (step.status !== "terminated") {
+                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
+                }
             },
             debug: function(message) {
-                if (step.status !== "terminated") {
+                if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
+                else if (step.status !== "terminated") {
+                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
+                }
             },
             warning: function(message) {
-                if (step.status !== "terminated") {
+                if (step.status === "running") {
                     step.status = "warning";
                     step.firebaseRef.child("status").set("warning");
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
+                else if (step.status !== "terminated") {
+                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
+                }
             },
             info: function(message) {
-                if (step.status !== "terminated") {
+                if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
+                else if (step.status !== "terminated") {
+                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
+                }
             },
             error: function(message) {
-                if (step.status !== "terminated") {
+                if (step.status === "running") {
                     step.status = "error";
                     step.firebaseRef.child("status").set("error");
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
+                else if (step.status !== "terminated") {
+                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'error' handler was triggered after the job finished with message: %s", message));
+                }
             },
             finish: function(err) {
-                if (step.status !== "terminated") {
+                if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status = err ? "error" : "success";
                     if (err){
-                        step.firebaseRef.child("logs").push(err);
+                        step.firebaseRef.child("logs").push(err.toString());
                     }
-                    step.firebaseRef.update({lastUpdate: new Date().getTime(), status: step.status, finishTimeStamp: step.finishTimeStamp});
+                    step.firebaseRef.update({status: step.status, finishTimeStamp: step.finishTimeStamp});
                     progressRef.child("lastUpdate").set(new Date().getTime());
+                }
+                else if (step.status !== "terminated") {
+                    if (err){
+                        self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
+                    }
+                    else {
+                        self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
+                    }
                 }
             }
         };
         return handler;
     };
 
-    var finish = function(err) {
-        handler.finish(err);
+    self.finish = function(err) {
+        if (handler){
+            handler.finish(err);
+        }
     };
 
-    return {
-        create:create,
-        finish:finish
-    };
 };
+
+util.inherits(TaskLogger, EventEmitter);
 
 module.exports = TaskLogger;
