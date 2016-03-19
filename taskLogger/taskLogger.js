@@ -38,7 +38,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
     var steps = {};
     var handler;
 
-    self.create = function(name) {
+    var create = function(name) {
 
         var step = steps[name];
         if (!step) {
@@ -54,8 +54,18 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
             steps[name] = step;
             var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             step.firebaseRef = stepRef.push(step);
-            buildManagerQueue.request({action:"new-progress-step", jobId: jobId, name: name}); //update build model
 
+            stepRef.on("value", function(snapshot){
+                snapshot.forEach(function(childSnapshot){
+                    var val = childSnapshot.val();
+                    if (val.name === name){
+                        stepRef.off("value");
+                        self.emit("step-pushed", name);
+                    }
+                });
+            });
+
+            buildManagerQueue.request({action:"new-progress-step", jobId: jobId, name: name}); //update build model
 
             progressRef.child("status").on("value", function(snapshot){ // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
                 var status = snapshot.val();
@@ -150,10 +160,16 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
         return handler;
     };
 
-    self.finish = function(err) {
+    var finish = function(err) {
         if (handler){
             handler.finish(err);
         }
+    };
+
+    return {
+        create: create,
+        finish: finish,
+        on: self.on.bind(self)
     };
 
 };
