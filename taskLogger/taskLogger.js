@@ -55,21 +55,19 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
             var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             step.firebaseRef = stepRef.push(step);
 
-            stepRef.on("value", function(snapshot){
-                snapshot.forEach(function(childSnapshot){
-                    var val = childSnapshot.val();
-                    if (val.name === name){
-                        stepRef.off("value");
-                        self.emit("step-pushed", name);
-                    }
-                });
+            step.firebaseRef.on("value", function(snapshot){
+                var val = snapshot.val();
+                if (val.name === name){
+                    stepRef.off("value");
+                    self.emit("step-pushed", name);
+                }
             });
 
             buildManagerQueue.request({action:"new-progress-step", jobId: jobId, name: name}); //update build model
 
             progressRef.child("status").on("value", function(snapshot){ // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
                 var status = snapshot.val();
-                if (status === "terminating" || status === "terminated" || status === "success" || status === "error"){
+                if (status !== "running"){
                     progressRef.child("status").off("value");
                     if (status === "terminating" && step.status === "running"){
                         step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
@@ -108,8 +106,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
             },
             warning: function(message) {
                 if (step.status === "running") {
-                    step.status = "warning";
-                    step.firebaseRef.child("status").set("warning");
+                    step.hasWarning = true;
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -141,6 +138,9 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status = err ? "error" : "success";
+                    if (step.hasWarning){ //
+                        step.status = "warning";
+                    }
                     if (err){
                         step.firebaseRef.child("logs").push(err.toString());
                     }
