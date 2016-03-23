@@ -4,3 +4,4 @@ coverage/*.html
 .coverrun
 .coverdata
 .debug
+coverage

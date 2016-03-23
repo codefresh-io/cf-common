@@ -1,3 +1,4 @@
 module.exports = {
-  analysisUtils : require('./analysis-utils')
+  analysisUtils : require('./analysisUtils/analysis-utils'),
+  TaskLogger: require('./taskLogger/taskLogger')
 };

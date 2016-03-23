@@ -5,7 +5,7 @@ var expect     = chai.expect;
 var sinon      = require('sinon');
 var sinonChai  = require('sinon-chai');
 chai.use(sinonChai);
-var analyze    = require('./index').analysisUtils;
+var analyze    = require('../index').analysisUtils;
 
 describe('prepareHashInfo', function () {
 
