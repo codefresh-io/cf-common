@@ -77,7 +77,7 @@ describe('taskLogger tests', function () {
                         val: function(){
                             return "terminating";
                         }
-                    })
+                    });
                 });
                 var pushSpy = sinon.spy(function(message){
                     if (message === "Process terminated"){
@@ -235,9 +235,9 @@ describe('taskLogger tests', function () {
                     val: function(){
                         return {
                             name: "step1"
-                        }
+                        };
                     }
-                })
+                });
             });
             var Firebase = createMockFirebase(null, null, null, onSpy);
             var Logger     = createMockLogger(null);
