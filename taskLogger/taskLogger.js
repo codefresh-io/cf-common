@@ -48,17 +48,17 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 status: "running",
                 logs: {}
             };
-            if (firstStepCreationTime && _.isEmpty({})){ // a workaround so api can provide the first step creation time from outside
+            if (firstStepCreationTime && _.isEmpty(steps)){ // a workaround so api can provide the first step creation time from outside
                 step.creationTimeStamp = firstStepCreationTime;
             }
             steps[name] = step;
-            var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
-            step.firebaseRef = stepRef.push(step);
+            var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
+            step.firebaseRef = stepsRef.push(step);
 
             step.firebaseRef.on("value", function(snapshot){
                 var val = snapshot.val();
                 if (val.name === name){
-                    stepRef.off("value");
+                    stepsRef.off("value");
                     self.emit("step-pushed", name);
                 }
             });
@@ -123,22 +123,11 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                     self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
                 }
             },
-            error: function(message) {
-                if (step.status === "running") {
-                    step.status = "error";
-                    step.firebaseRef.child("status").set("error");
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else if (step.status !== "terminated") {
-                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'error' handler was triggered after the job finished with message: %s", message));
-                }
-            },
             finish: function(err) {
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status = err ? "error" : "success";
-                    if (step.hasWarning){ //
+                    if (step.hasWarning){ //this is a workaround to mark a step with warning status. we do it at the end of the step
                         step.status = "warning";
                     }
                     if (err){

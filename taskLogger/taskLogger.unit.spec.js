@@ -70,6 +70,32 @@ describe('taskLogger tests', function () {
                 logger.create("Step1");
                 logger.finish();
             });
+
+            it('1.1.3 create a new logger, receive a terminating status', function (done) {
+                var onSpy = sinon.spy(function(event, callback){
+                    callback({
+                        val: function(){
+                            return "terminating";
+                        }
+                    })
+                });
+                var pushSpy = sinon.spy(function(message){
+                    if (message === "Process terminated"){
+                        done();
+                    }
+                    else {
+                        return createMockFirebaseWithPushSpy()();
+                    }
+                });
+                var createMockFirebaseWithPushSpy = function(){
+                    return createMockFirebase(null, null, pushSpy);
+                };
+
+                var Firebase = createMockFirebase(null, null, pushSpy, onSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                logger.create("step1");
+            });
         });
 
         describe('negative', function(){
@@ -146,7 +172,6 @@ describe('taskLogger tests', function () {
             expect(stepLogger.debug).to.exist; // jshint ignore:line
             expect(stepLogger.warning).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
-            expect(stepLogger.error).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             expect(removeSpy).to.not.have.been.called; // jshint ignore:line
         });
@@ -161,7 +186,6 @@ describe('taskLogger tests', function () {
             expect(stepLogger.debug).to.exist; // jshint ignore:line
             expect(stepLogger.warning).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
-            expect(stepLogger.error).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             logger.create("step1");
         });
@@ -176,10 +200,54 @@ describe('taskLogger tests', function () {
             expect(stepLogger.debug).to.exist; // jshint ignore:line
             expect(stepLogger.warning).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
-            expect(stepLogger.error).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             logger.create("step1");
         });
+
+        it('2.4 creating a new step when firstStepCreationTIme was passed should put this time on the first step creationTimeStamp but not on the second', function (done) {
+            var firstStepCreationTime = new Date().getTime();
+            var pushSpy = sinon.spy(function(step){
+                if (step.name === "step1"){
+                    expect(step.creationTimeStamp).to.equal(firstStepCreationTime);
+                    return createMockFirebase()();
+                }
+                else if (step.name === "step2"){
+                    expect(step.creationTimeStamp).to.not.equal(firstStepCreationTime);
+                    var onHandler = function(){
+                        done();
+                    };
+                    return createMockFirebase(null, null, null, onHandler)();
+                }
+                else {
+                    done(new Error("should not reach here"));
+                }
+            });
+            var Firebase = createMockFirebase(null, null, pushSpy, null, null, null);
+            var Logger     = createMockLogger(null);
+            var logger = new Logger("progress_id", firstStepCreationTime, "firebaseUrl", Firebase, {servers: ['address']});
+            logger.create("step1");
+            logger.create("step2");
+        });
+
+        it('2.5 create a new step should emit an event "step-pushed" once it arrived to firebase', function (done) {
+            var onSpy = sinon.spy(function(event, callback){
+                callback({
+                    val: function(){
+                        return {
+                            name: "step1"
+                        }
+                    }
+                })
+            });
+            var Firebase = createMockFirebase(null, null, null, onSpy);
+            var Logger     = createMockLogger(null);
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            logger.on("step-pushed", function(){
+                done();
+            });
+            logger.create("step1");
+        });
+
 
     });
 
@@ -225,17 +293,7 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.5 trigger error handler', function(){
-
-            var Firebase = createMockFirebase();
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-            var stepLogger = logger.create("step1");
-            stepLogger.error("error message");
-
-        });
-
-        it('3.6 trigger finish handler without error', function(){
+        it('3.5 trigger finish handler without error', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -245,13 +303,24 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.7 trigger finish handler with error', function(){
+        it('3.6 trigger finish handler with error', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
             var stepLogger = logger.create("step1");
             stepLogger.finish(new Error("step error"));
+
+        });
+
+        it('3.7 trigger warning handler and finish', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var stepLogger = logger.create("step1");
+            stepLogger.warning("warning message");
+            stepLogger.finish();
 
         });
 
@@ -312,20 +381,7 @@ describe('taskLogger tests', function () {
             stepLogger.info("not good!");
         });
 
-        it('4.5 should emit an error when triggering error handler after step has finished', function(done){
-            var Firebase = createMockFirebase();
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-            var stepLogger = logger.create("step1");
-            logger.on("error", function(err){
-                expect(err.toString()).to.contain("was triggered after the job finished");
-                done();
-            });
-            stepLogger.finish();
-            stepLogger.error("not good!");
-        });
-
-        it('4.6 should emit an error when triggering finish handler after step has finished', function(done){
+        it('4.5 should emit an error when triggering finish handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
