@@ -79,6 +79,22 @@ describe('prepareHashInfo', function () {
 
         it('providing a non-valid branch name (in terms of docker image tag conventions) should remove all non valid chars', function () {
 
+            return analyze.prepareHashInfo("owner", "name", "..branch", "sha123", {}, "userId")
+                .then(function (res) {
+                    expect(res.repo.tag).to.equal("branch");
+                });
+        });
+
+        it('providing a non-valid branch name (in terms of docker image tag conventions) should remove all non valid chars', function () {
+
+            return analyze.prepareHashInfo("owner", "name", ".a.branch", "sha123", {}, "userId")
+                .then(function (res) {
+                    expect(res.repo.tag).to.equal("a.branch");
+                });
+        });
+
+        it('providing a non-valid branch name (in terms of docker image tag conventions) should remove all non valid chars', function () {
+
             return analyze.prepareHashInfo("owner", "name", "b&ranch", "sha123", {}, "userId")
                 .then(function (res) {
                     expect(res.repo.tag).to.equal("branch");
@@ -108,6 +124,15 @@ describe('prepareHashInfo', function () {
             return analyze.prepareHashInfo("owner", "name", "&&", "sha123", {}, "userId")
                 .then(function (res) {
                     expect(res.repo.tag).to.equal("");
+                });
+
+        });
+
+        it('should replace unsupported chars in image name', function () {
+
+            return analyze.prepareHashInfo("infra - structure", "test", "branch", "sha123", {}, "userId")
+                .then(function (res) {
+                    expect(res.repo.imageName).to.equal("infrastructure/test:branch");
                 });
 
         });
