@@ -2,6 +2,18 @@ var crypto  = require('crypto');
 var Q       = require('q');
 var _       = require('lodash');
 
+function removeImageOwnerUnsupportedChars(owner){
+    owner = owner.toLowerCase();
+    return owner.replace(/[^a-z0-9]+/g, "");
+}
+
+var removeImageNameUnsupportedChars = removeImageOwnerUnsupportedChars;
+
+function removeImageTagUnsupportedChars(tag){
+    return tag.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]*/, "");
+}
+
+
 function getLatestSha(user, repoOwner, repoName, branch) {
 
     return getLatestSha(user, repoOwner, repoName, branch)
@@ -38,7 +50,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var integ_sh = "";
             var useDockerfileFromRepo = false;
 
-            var imageName = settings.imageName || repoOwner + '/' + repoName;
+            var imageName = settings.imageName || removeImageOwnerUnsupportedChars(repoOwner) + '/' + removeImageNameUnsupportedChars(repoName);
             var repo = imageName.toLowerCase();
 
             if (settings) {
@@ -78,7 +90,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
             var forRepo = {
                 hash: forRevision.hash,
                 repo: repo,
-                tag: branch.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]/, "")
+                tag: removeImageTagUnsupportedChars(branch)
             };
             forRepo.imageName = forRepo.repo + ':' + forRepo.tag;
 
@@ -116,5 +128,8 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
 module.exports = {
     prepareHashInfo: prepareHashInfo,
     getLatestSha: getLatestSha,
-    getLatestCommit: getLatestCommit
+    getLatestCommit: getLatestCommit,
+    removeImageOwnerUnsupportedChars: removeImageOwnerUnsupportedChars,
+    removeImageNameUnsupportedChars: removeImageNameUnsupportedChars,
+    removeImageTagUnsupportedChars: removeImageTagUnsupportedChars    
 };
