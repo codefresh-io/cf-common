@@ -1,6 +1,6 @@
 {
   "name": "cf-common",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
@@ -9,32 +9,26 @@
   "author": "Codefresh <admin@codefresh.io> (http://codefresh.io)",
   "license": "ISC",
   "devDependencies": {
-    "gulp": "^3.9.0",
-    "gulp-coverage": "^0.3.36",
+    "chai": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-coveralls": "^0.1.4",
     "gulp-env": "^0.2.0",
-    "gulp-git": "^1.2.1",
-    "gulp-ignore": "^1.2.1",
+    "gulp-istanbul": "^0.10.4",
     "gulp-jshint": "^1.11.0",
-    "gulp-logger": "0.0.2",
-    "gulp-mocha": "^2.1.1",
+    "gulp-mocha-co": "^0.4.1-co.3",
     "gulp-rimraf": "^0.1.1",
-    "gulp-run": "^1.6.7",
-    "gulp-util": "^3.0.6",
+    "isparta": "^4.0.0",
+    "proxyquire": "^1.7.4",
     "run-sequence": "^1.1.0",
-    "proxyquire": "^1.5.0",
-    "q": "^1.1.2",
-    "sinon": "^1.15.4",
-    "sinon-chai": "^2.8.0",
-    "chai": "^1.9.2",
-    "shelljs": "^0.5.3",
-    "firebase": "^2.4.1",
-    "cf-queue": "git+https://github.com/codefresh-io/cf-queue.git#58c4f3f5942e480826167d3199ff37ae5370757b",
-    "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1"
+    "shelljs": "^0.6.0",
+    "sinon": "^1.17.4",
+    "sinon-chai": "^2.8.0"
   },
   "dependencies": {
     "crypto": "0.0.3",
-    "gulp-coveralls": "^0.1.4",
     "lodash": "^3.10.1",
-    "q": "^1.4.1"
+    "q": "^1.4.1",
+    "cf-queue": "git+https://github.com/codefresh-io/cf-queue.git#58c4f3f5942e480826167d3199ff37ae5370757b",
+    "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1"
   }
 }
