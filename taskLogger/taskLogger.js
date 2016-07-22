@@ -35,10 +35,22 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
 
     var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
 
+    var fatal = false;
+    var finished = false;
     var steps = {};
     var handler;
 
     var create = function(name) {
+
+        if (fatal || finished){
+            return {
+                write: function(){},
+                debug: function(){},
+                warning: function(){},
+                info: function(){},
+                finish: function(){},
+            }
+        }
 
         var step = steps[name];
         if (!step) {
@@ -87,6 +99,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
 
         handler = {
             write: function(message) {
+                if (fatal) return;
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -96,6 +109,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 }
             },
             debug: function(message) {
+                if (fatal) return;
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -105,6 +119,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 }
             },
             warning: function(message) {
+                if (fatal) return;
                 if (step.status === "running") {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(message + '\r\n');
@@ -115,6 +130,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 }
             },
             info: function(message) {
+                if (fatal) return;
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -124,6 +140,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 }
             },
             finish: function(err) {
+                if (fatal || finished) return;
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status = err ? "error" : "success";
@@ -135,6 +152,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                     }
                     step.firebaseRef.update({status: step.status, finishTimeStamp: step.finishTimeStamp});
                     progressRef.child("lastUpdate").set(new Date().getTime());
+                    handler = undefined;
                 }
                 else if (step.status !== "terminated") {
                     if (err){
@@ -150,14 +168,33 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
     };
 
     var finish = function(err) {
+        if (fatal) return;
+        finished = true;
         if (handler){
             handler.finish(err);
         }
     };
 
+    var fatalError = function(err) {
+        if (!err){
+            throw new CFError(ErrorTypes.Error, "failed to mark task logger with fatal state");
+        }
+        if (fatal) return;
+
+        if (handler){
+            handler.finish(err);
+        }
+        else {
+            var errorStep = this.create("Something went wrong");
+            errorStep.finish(err);
+        }
+        fatal = true;
+    };
+
     return {
         create: create,
         finish: finish,
+        fatalError: fatalError,
         on: self.on.bind(self)
     };
 
