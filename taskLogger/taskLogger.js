@@ -140,7 +140,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
                 }
             },
             finish: function(err) {
-                if (fatal || finished) return;
+                if (fatal) return;
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status = err ? "error" : "success";
@@ -169,10 +169,10 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
 
     var finish = function(err) {
         if (fatal) return;
-        finished = true;
         if (handler){
             handler.finish(err);
         }
+        finished = true;
     };
 
     var fatalError = function(err) {
