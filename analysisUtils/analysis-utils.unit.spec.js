@@ -17,36 +17,37 @@ describe('prepareHashInfo', function () {
                 dockerFileContents: "FROM jim/bob:version",
                 test_sh: "test",
                 deploy_sh: "deploy",
-                userDockerFileFromRepo: true
+                userDockerFileFromRepo: true,
+                imageName: "repoOwner/repoName"
             };
 
             return analyze.prepareHashInfo("owner", "name", "branch", "sha123", settings, "userId")
                 .then(function (res) {
                     var expectedRes = {
                         repo: {
-                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
-                            repo: 'owner/name',
+                            hash: 'ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992',
+                            repo: 'repoowner/reponame',
                             tag: 'branch',
-                            imageName: 'owner/name:branch'
+                            imageName: 'repoowner/reponame:branch'
                         },
                         revision: {
-                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
-                            repo: 'owner/name',
-                            tag: '4c1bbca29599290960a76b435bf7abc584da407c',
-                            imageName: 'owner/name:4c1bbca29599290960a76b435bf7abc584da407c'
+                            hash: 'ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992',
+                            repo: 'repoowner/reponame',
+                            tag: 'ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992',
+                            imageName: 'repoowner/reponame:ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992'
                         },
                         userSpecificFull: {
-                            hash: '4c1bbca29599290960a76b435bf7abc584da407c',
-                            repo: 'owner/name',
-                            tag: '4c1bbca29599290960a76b435bf7abc584da407c-userId',
+                            hash: 'ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992',
+                            repo: 'repoowner/reponame',
+                            tag: 'ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992-userId',
                             userId: 'userId',
-                            imageName: 'owner/name:4c1bbca29599290960a76b435bf7abc584da407c-userId'
+                            imageName: 'repoowner/reponame:ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992-userId'
                         },
                         "userSpecificCi": {
-                            "hash": "4c1bbca29599290960a76b435bf7abc584da407c",
-                            "imageName": "owner/name:4c1bbca29599290960a76b435bf7abc584da407c-CI-userId",
-                            "repo": "owner/name",
-                            "tag": "4c1bbca29599290960a76b435bf7abc584da407c-CI-userId",
+                            "hash": "ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992",
+                            "imageName": "repoowner/reponame:ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992-CI-userId",
+                            "repo": "repoowner/reponame",
+                            "tag": "ae375201fa5b6b5ed3ff5bd9dc38df07cbd79992-CI-userId",
                             "userId": "userId"
                         },
                         dockerFileContents: 'FROM jim/bob:version',
