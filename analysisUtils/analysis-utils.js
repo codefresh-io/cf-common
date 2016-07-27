@@ -67,6 +67,7 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
                     JSON.stringify(useDockerfileFromRepo) +
                     (useDockerfileFromRepo ? '': JSON.stringify(dockerFileContents)) +
                     JSON.stringify(_.get(settings, 'template.value', '')) +
+                    _.get(settings, 'imageName', '') +
                     (extra ? JSON.stringify(extra) : '') +
                     sha;
 
