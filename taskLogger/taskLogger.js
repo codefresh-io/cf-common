@@ -177,7 +177,7 @@ var TaskLogger = function(jobId, firstStepCreationTime, baseFirebaseUrl, Firebas
 
     var fatalError = function(err) {
         if (!err){
-            throw new CFError(ErrorTypes.Error, "failed to mark task logger with fatal state");
+            throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
         }
         if (fatal) return;
 
