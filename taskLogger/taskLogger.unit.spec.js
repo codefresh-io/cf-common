@@ -72,10 +72,17 @@ describe('taskLogger tests', function () {
             });
 
             it('1.1.3 create a new logger, receive a terminating status', function (done) {
+                var initialOn = true;
                 var onSpy = sinon.spy(function(event, callback){
                     callback({
                         val: function(){
-                            return "terminating";
+                            if (initialOn){
+                                initialOn = false;
+                                return "running";
+                            }
+                            else {
+                                return "terminating";
+                            }
                         }
                     });
                 });
@@ -87,6 +94,7 @@ describe('taskLogger tests', function () {
                         return createMockFirebaseWithPushSpy()();
                     }
                 });
+
                 var createMockFirebaseWithPushSpy = function(){
                     return createMockFirebase(null, null, pushSpy);
                 };
@@ -95,6 +103,46 @@ describe('taskLogger tests', function () {
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
                 logger.create("step1");
+            });
+
+            it('1.1.4 create a new logger, receive a terminating status during creation', function () {
+                var onSpy = sinon.spy(function(event, callback){
+                    callback({
+                        val: function(){
+                            return "terminating";
+                        }
+                    });
+                });
+
+                var Firebase = createMockFirebase(null, null, null, onSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var stepLogger = logger.create("step1");
+                expect(stepLogger.write()).to.equal(undefined);
+                expect(stepLogger.debug()).to.equal(undefined);
+                expect(stepLogger.warning()).to.equal(undefined);
+                expect(stepLogger.info()).to.equal(undefined);
+                expect(stepLogger.finish()).to.equal(undefined);
+            });
+
+            it('1.1.5 create a new logger, receive a terminated status during creation', function () {
+                var onSpy = sinon.spy(function(event, callback){
+                    callback({
+                        val: function(){
+                            return "terminated";
+                        }
+                    });
+                });
+
+                var Firebase = createMockFirebase(null, null, null, onSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var stepLogger = logger.create("step1");
+                expect(stepLogger.write()).to.equal(undefined);
+                expect(stepLogger.debug()).to.equal(undefined);
+                expect(stepLogger.warning()).to.equal(undefined);
+                expect(stepLogger.info()).to.equal(undefined);
+                expect(stepLogger.finish()).to.equal(undefined);
             });
         });
 
@@ -411,4 +459,59 @@ describe('taskLogger tests', function () {
 
     });
 
+    describe('5 fatalError', function() {
+
+        describe('potisive', function(){
+
+            it('5.1.1 should not enable creating an additional step once fatal error was called', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase(childSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                logger.fatalError(new Error("fatal error"));
+                var stepLogger = logger.create("new step");
+                stepLogger.write("hey");
+                expect(childSpy.callCount).to.equal(4); // jshint ignore:line
+            });
+
+            it('5.1.2 should call last step finish in case a step was created before', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase(childSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var stepLogger = logger.create("new step");
+                stepLogger.finish = sinon.spy();
+                logger.fatalError(new Error("fatal error"));
+                expect(stepLogger.finish).to.have.been.called; // jshint ignore:line
+            });
+
+        });
+
+        describe('negative', function(){
+
+            it('5.2.1 should fail if calling fatal error without an error', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase(childSpy);
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                try {
+                    logger.fatalError();
+                }
+                catch(e){
+                    expect(e.toString()).to.equal("Error: fatalError was called without an error. not valid.");
+                    return;
+                }
+                throw new Error("should have failed");
+            });
+
+        });
+        
+    });
+    
 });
