@@ -144,6 +144,16 @@ describe('taskLogger tests', function () {
                 expect(stepLogger.info()).to.equal(undefined);
                 expect(stepLogger.finish()).to.equal(undefined);
             });
+
+            it('1.1.6 create a new logger with a reference to a previous step defined in a different instance', function () {
+                var Firebase = createMockFirebase();
+                var Logger = createMockLogger();
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']}, "previousStepReference");
+                expect(logger).to.exist; // jshint ignore:line
+                expect(logger.create).to.exist; // jshint ignore:line
+                expect(logger.finish).to.exist; // jshint ignore:line
+            });
+
         });
 
         describe('negative', function(){
@@ -372,6 +382,14 @@ describe('taskLogger tests', function () {
 
         });
 
+        it('3.8 trigger getReference handler', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var stepLogger = logger.create("step1");
+            stepLogger.getReference();
+        });
 
     });
 
@@ -442,7 +460,6 @@ describe('taskLogger tests', function () {
             stepLogger.finish("not good!");
         });
 
-
         it('4.7 should emit an error when triggering finish handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -473,6 +490,7 @@ describe('taskLogger tests', function () {
                 logger.fatalError(new Error("fatal error"));
                 var stepLogger = logger.create("new step");
                 stepLogger.write("hey");
+                stepLogger.getReference();
                 expect(childSpy.callCount).to.equal(4); // jshint ignore:line
             });
 
