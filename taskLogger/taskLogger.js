@@ -229,6 +229,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         create: create,
         finish: finish,
         fatalError: fatalError,
+        ignoreTopLevelStatusEvents: function() {
+            progressRef.child("status").off("value");
+        },
         on: self.on.bind(self)
     };
 
