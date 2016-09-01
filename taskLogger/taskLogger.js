@@ -42,11 +42,11 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
 
     // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
     // this logic can't be moved to the step because there are times that it is possible that no steps will be available
-    var listenForManualTermination = function(snapshot){
+    var listenForManualTermination = function (snapshot) {
         var status = snapshot.val();
-        if (status !== "running"){
+        if (status !== "running") {
             progressRef.child("status").off("value", listenForManualTermination);
-            if (status === "terminating" || status === "terminated"){
+            if (status === "terminating" || status === "terminated") {
                 finished = true;
             }
         }
@@ -68,15 +68,15 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     };
 
     if (initializeStepReference) {
-        var initializeStep = {
-            name:"Initializing Process",
+        var initializeStep            = {
+            name: "Initializing Process",
             status: "running",
             firebaseRef: new FirebaseLib(initializeStepReference)
         };
         steps["Initializing Process"] = initializeStep;
         progressRef.child("status").on("value", listenOnTopLevelStatus.bind(this, initializeStep));
     }
-    
+
     var create = function (name) {
 
         if (fatal || finished) {
@@ -92,6 +92,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 info: function () {
                 },
                 finish: function () {
+                },
+                ignoreTopLevelStatusEvents: function () {
+                    
                 }
             };
         }
@@ -229,7 +232,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         create: create,
         finish: finish,
         fatalError: fatalError,
-        ignoreTopLevelStatusEvents: function() {
+        ignoreTopLevelStatusEvents: function () {
             progressRef.child("status").off("value");
         },
         on: self.on.bind(self)
