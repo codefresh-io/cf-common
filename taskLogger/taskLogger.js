@@ -87,7 +87,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 },
                 debug: function () {
                 },
-                warning: function () {
+                warn: function () {
                 },
                 info: function () {
                 },
@@ -155,7 +155,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
                 }
             },
-            warning: function (message) {
+            warn: function (message) {
                 if (fatal) return;
                 if (step.status === "running") {
                     step.hasWarning = true;

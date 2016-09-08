@@ -120,7 +120,7 @@ describe('taskLogger tests', function () {
                 var stepLogger = logger.create("step1");
                 expect(stepLogger.write()).to.equal(undefined);
                 expect(stepLogger.debug()).to.equal(undefined);
-                expect(stepLogger.warning()).to.equal(undefined);
+                expect(stepLogger.warn()).to.equal(undefined);
                 expect(stepLogger.info()).to.equal(undefined);
                 expect(stepLogger.finish()).to.equal(undefined);
             });
@@ -140,7 +140,7 @@ describe('taskLogger tests', function () {
                 var stepLogger = logger.create("step1");
                 expect(stepLogger.write()).to.equal(undefined);
                 expect(stepLogger.debug()).to.equal(undefined);
-                expect(stepLogger.warning()).to.equal(undefined);
+                expect(stepLogger.warn()).to.equal(undefined);
                 expect(stepLogger.info()).to.equal(undefined);
                 expect(stepLogger.finish()).to.equal(undefined);
             });
@@ -228,7 +228,7 @@ describe('taskLogger tests', function () {
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
             expect(stepLogger.debug).to.exist; // jshint ignore:line
-            expect(stepLogger.warning).to.exist; // jshint ignore:line
+            expect(stepLogger.warn).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             expect(removeSpy).to.not.have.been.called; // jshint ignore:line
@@ -242,7 +242,7 @@ describe('taskLogger tests', function () {
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
             expect(stepLogger.debug).to.exist; // jshint ignore:line
-            expect(stepLogger.warning).to.exist; // jshint ignore:line
+            expect(stepLogger.warn).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             logger.create("step1");
@@ -256,7 +256,7 @@ describe('taskLogger tests', function () {
             expect(stepLogger).to.exist; // jshint ignore:line
             expect(stepLogger.write).to.exist; // jshint ignore:line
             expect(stepLogger.debug).to.exist; // jshint ignore:line
-            expect(stepLogger.warning).to.exist; // jshint ignore:line
+            expect(stepLogger.warn).to.exist; // jshint ignore:line
             expect(stepLogger.info).to.exist; // jshint ignore:line
             expect(stepLogger.finish).to.exist; // jshint ignore:line
             logger.create("step1");
@@ -331,13 +331,13 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.3 trigger warning handler', function(){
+        it('3.3 trigger warn handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
             var stepLogger = logger.create("step1");
-            stepLogger.warning("warning message");
+            stepLogger.warn("warn message");
 
         });
 
@@ -371,13 +371,13 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.7 trigger warning handler and finish', function(){
+        it('3.7 trigger warn handler and finish', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
             var stepLogger = logger.create("step1");
-            stepLogger.warning("warning message");
+            stepLogger.warn("warn message");
             stepLogger.finish();
 
         });
@@ -421,7 +421,7 @@ describe('taskLogger tests', function () {
             stepLogger.debug("not good!");
         });
 
-        it('4.3 should emit an error when triggering warning handler after step has finished', function(done){
+        it('4.3 should emit an error when triggering warn handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
@@ -431,7 +431,7 @@ describe('taskLogger tests', function () {
                 done();
             });
             stepLogger.finish();
-            stepLogger.warning("not good!");
+            stepLogger.warn("not good!");
         });
 
         it('4.4 should emit an error when triggering info handler after step has finished', function(done){
