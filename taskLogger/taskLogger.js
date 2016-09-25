@@ -117,7 +117,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             step.firebaseRef.on("value", function (snapshot) {
                 var val = snapshot.val();
                 if (val && val.name === name) {
-                    stepsRef.off("value");
+                    step.firebaseRef.off("value");
                     self.emit("step-pushed", name);
                 }
             });
