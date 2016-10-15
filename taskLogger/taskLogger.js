@@ -1,3 +1,5 @@
+'use strict';
+
 var _            = require('lodash');
 var Queue        = require('cf-queue');
 var CFError      = require('cf-errors');

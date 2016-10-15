@@ -1,8 +1,7 @@
-var proxyquire = require('proxyquire').noCallThru();
-var Q          = require('q');
+var proxyquire = require('proxyquire').noCallThru(); // jshint ignore:line
+var Q          = require('q'); // jshint ignore:line
 var chai       = require('chai');
 var expect     = chai.expect;
-var sinon      = require('sinon');
 var sinonChai  = require('sinon-chai');
 chai.use(sinonChai);
 var analyze    = require('../index').analysisUtils;

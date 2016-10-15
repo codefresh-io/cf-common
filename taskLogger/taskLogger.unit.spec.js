@@ -95,7 +95,7 @@ describe('taskLogger tests', function () {
                     }
                 });
 
-                var createMockFirebaseWithPushSpy = function(){
+                var createMockFirebaseWithPushSpy = function(){ // jshint ignore:line
                     return createMockFirebase(null, null, pushSpy);
                 };
 
@@ -185,7 +185,6 @@ describe('taskLogger tests', function () {
             });
 
             it('1.1.3 should fail when not providing Firebase lib', function () {
-                var Firebase = createMockFirebase();
                 var Logger = createMockLogger();
                 try{
                     var logger = new Logger("progress_id", null, "baseurl", null, {servers: ['address']}); // jshint ignore:line
