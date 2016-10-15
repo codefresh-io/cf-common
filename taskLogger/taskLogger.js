@@ -94,7 +94,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 finish: function () {
                 },
                 ignoreTopLevelStatusEvents: function () {
-                    
+
                 }
             };
         }
@@ -159,7 +159,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) return;
                 if (step.status === "running") {
                     step.hasWarning = true;
-                    step.firebaseRef.child("logs").push(message + '\r\n');
+                    step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
                 else if (step.status !== "terminated") {
@@ -181,11 +181,11 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status          = err ? "error" : "success";
-                    if (step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
-                        step.status = "warning";
-                    }
                     if (err) {
-                        step.firebaseRef.child("logs").push(err.toString());
+                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m`);
+                    }
+                    if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
+                        step.status = "warning";
                     }
                     step.firebaseRef.update({status: step.status, finishTimeStamp: step.finishTimeStamp});
                     progressRef.child("lastUpdate").set(new Date().getTime());
