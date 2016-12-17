@@ -390,6 +390,24 @@ describe('taskLogger tests', function () {
             stepLogger.getReference();
         });
 
+        it('3.9 trigger getLogsReference handler', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var stepLogger = logger.create("step1");
+            stepLogger.getLogsReference();
+        });
+
+        it('3.10 trigger getLastUpdateReference handler', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var stepLogger = logger.create("step1");
+            stepLogger.getLastUpdateReference();
+        });
+
     });
 
     describe('4 using handlers after step was finished', function(){

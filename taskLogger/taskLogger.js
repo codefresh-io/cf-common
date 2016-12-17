@@ -62,7 +62,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             if ((status === "terminating" || status === "terminated") && step.status === "running") {
                 step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                 step.status          = "terminated";
-                step.firebaseRef.update({status: step.status, finishTimeStamp: step.finishTimeStamp});
+                step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                 step.firebaseRef.child("logs").push("Process terminated");
                 progressRef.child("lastUpdate").set(new Date().getTime());
             }
@@ -84,6 +84,12 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         if (fatal || finished) {
             return {
                 getReference: function () {
+                },
+                getLogsReference: function () {
+
+                },
+                getLastUpdateReference: function () {
+
                 },
                 write: function () {
                 },
@@ -124,62 +130,82 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 }
             });
 
-            buildManagerQueue.request({action: "new-progress-step", jobId: jobId, name: name}); //update build model
+            buildManagerQueue.request({ action: "new-progress-step", jobId: jobId, name: name }); //update build model
 
             progressRef.child("status").on("value", listenOnTopLevelStatus.bind(this, step));
         }
         else {
             step.status = "running";
-            step.firebaseRef.update({status: step.status, finishTimeStamp: ""}); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
+            step.firebaseRef.update({ status: step.status, finishTimeStamp: "" }); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
         }
 
         handler = {
             getReference: function () {
                 return step.firebaseRef.toString();
             },
+            getLogsReference: function () {
+                return step.firebaseRef.child('logs').toString();
+            },
+            getLastUpdateReference: function () {
+                return progressRef.child('lastUpdate').toString();
+            },
             write: function (message) {
-                if (fatal) return;
+                if (fatal) {
+                    return;
+                }
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
                 else if (step.status !== "terminated") {
-                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
                 }
             },
             debug: function (message) {
-                if (fatal) return;
+                if (fatal) {
+                    return;
+                }
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
                 else if (step.status !== "terminated") {
-                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
                 }
             },
             warn: function (message) {
-                if (fatal) return;
+                if (fatal) {
+                    return;
+                }
                 if (step.status === "running") {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
                 else if (step.status !== "terminated") {
-                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
                 }
             },
             info: function (message) {
-                if (fatal) return;
+                if (fatal) {
+                    return;
+                }
                 if (step.status === "running") {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
                 else if (step.status !== "terminated") {
-                    self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
                 }
             },
             finish: function (err) {
-                if (fatal) return;
+                if (fatal) {
+                    return;
+                }
                 if (step.status === "running") {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status          = err ? "error" : "success";
@@ -189,13 +215,14 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
                         step.status = "warning";
                     }
-                    step.firebaseRef.update({status: step.status, finishTimeStamp: step.finishTimeStamp});
+                    step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
                     handler = undefined;
                 }
                 else if (step.status !== "terminated") {
                     if (err) {
-                        self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
+                        self.emit("error",
+                            new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
                     }
                     else {
                         self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
@@ -207,7 +234,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     };
 
     var finish = function (err) {
-        if (fatal) return;
+        if (fatal) {
+            return;
+        }
         if (handler) {
             handler.finish(err);
         }
@@ -218,7 +247,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         if (!err) {
             throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
         }
-        if (fatal) return;
+        if (fatal) {
+            return;
+        }
 
         if (handler) {
             handler.finish(err);
