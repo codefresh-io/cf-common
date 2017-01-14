@@ -71,81 +71,7 @@ describe('taskLogger tests', function () {
                 logger.finish();
             });
 
-            it('1.1.3 create a new logger, receive a terminating status', function (done) {
-                var initialOn = true;
-                var onSpy = sinon.spy(function(event, callback){
-                    callback({
-                        val: function(){
-                            if (initialOn){
-                                initialOn = false;
-                                return "running";
-                            }
-                            else {
-                                return "terminating";
-                            }
-                        }
-                    });
-                });
-                var pushSpy = sinon.spy(function(message){
-                    if (message === "Process terminated"){
-                        done();
-                    }
-                    else {
-                        return createMockFirebaseWithPushSpy()();
-                    }
-                });
-
-                var createMockFirebaseWithPushSpy = function(){ // jshint ignore:line
-                    return createMockFirebase(null, null, pushSpy);
-                };
-
-                var Firebase = createMockFirebase(null, null, pushSpy, onSpy);
-                var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-                logger.create("step1");
-            });
-
-            it('1.1.4 create a new logger, receive a terminating status during creation', function () {
-                var onSpy = sinon.spy(function(event, callback){
-                    callback({
-                        val: function(){
-                            return "terminating";
-                        }
-                    });
-                });
-
-                var Firebase = createMockFirebase(null, null, null, onSpy);
-                var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-                var stepLogger = logger.create("step1");
-                expect(stepLogger.write()).to.equal(undefined);
-                expect(stepLogger.debug()).to.equal(undefined);
-                expect(stepLogger.warn()).to.equal(undefined);
-                expect(stepLogger.info()).to.equal(undefined);
-                expect(stepLogger.finish()).to.equal(undefined);
-            });
-
-            it('1.1.5 create a new logger, receive a terminated status during creation', function () {
-                var onSpy = sinon.spy(function(event, callback){
-                    callback({
-                        val: function(){
-                            return "terminated";
-                        }
-                    });
-                });
-
-                var Firebase = createMockFirebase(null, null, null, onSpy);
-                var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-                var stepLogger = logger.create("step1");
-                expect(stepLogger.write()).to.equal(undefined);
-                expect(stepLogger.debug()).to.equal(undefined);
-                expect(stepLogger.warn()).to.equal(undefined);
-                expect(stepLogger.info()).to.equal(undefined);
-                expect(stepLogger.finish()).to.equal(undefined);
-            });
-
-            it('1.1.6 create a new logger with a reference to a previous step defined in a different instance', function () {
+            it('1.1.3 create a new logger with a reference to a previous step defined in a different instance', function () {
                 var Firebase = createMockFirebase();
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']}, "previousStepReference");
@@ -215,7 +141,6 @@ describe('taskLogger tests', function () {
 
     describe('2 create a new step', function(){
 
-
         it('2.1 create a new step should return specific functions', function () {
             var removeSpy = sinon.spy(function(){
                 return this;
@@ -247,21 +172,7 @@ describe('taskLogger tests', function () {
             logger.create("step1");
         });
 
-        it('2.3 creating the same step twice should not listen on the progress top-level status again', function () {
-            var Firebase = createMockFirebase();
-            var Logger     = createMockLogger(null, null, null, null, null, null, null);
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
-            var stepLogger = logger.create("step1");
-            expect(stepLogger).to.exist; // jshint ignore:line
-            expect(stepLogger.write).to.exist; // jshint ignore:line
-            expect(stepLogger.debug).to.exist; // jshint ignore:line
-            expect(stepLogger.warn).to.exist; // jshint ignore:line
-            expect(stepLogger.info).to.exist; // jshint ignore:line
-            expect(stepLogger.finish).to.exist; // jshint ignore:line
-            logger.create("step1");
-        });
-
-        it('2.4 creating a new step when firstStepCreationTIme was passed should put this time on the first step creationTimeStamp but not on the second', function (done) {
+        it('2.3 creating a new step when firstStepCreationTIme was passed should put this time on the first step creationTimeStamp but not on the second', function (done) {
             var firstStepCreationTime = new Date().getTime();
             var pushSpy = sinon.spy(function(step){
                 if (step.name === "step1"){
@@ -286,7 +197,7 @@ describe('taskLogger tests', function () {
             logger.create("step2");
         });
 
-        it('2.5 create a new step should emit an event "step-pushed" once it arrived to firebase', function (done) {
+        it('2.4 create a new step should emit an event "step-pushed" once it arrived to firebase', function (done) {
             var onSpy = sinon.spy(function(event, callback){
                 callback({
                     val: function(){
@@ -508,7 +419,7 @@ describe('taskLogger tests', function () {
                 var stepLogger = logger.create("new step");
                 stepLogger.write("hey");
                 stepLogger.getReference();
-                expect(childSpy.callCount).to.equal(4); // jshint ignore:line
+                expect(childSpy.callCount).to.equal(2); // jshint ignore:line
             });
 
             it('5.1.2 should call last step finish in case a step was created before', function(){

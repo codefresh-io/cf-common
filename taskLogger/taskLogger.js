@@ -42,33 +42,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     var steps    = {};
     var handler;
 
-    // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
-    // this logic can't be moved to the step because there are times that it is possible that no steps will be available
-    var listenForManualTermination = function (snapshot) {
-        var status = snapshot.val();
-        if (status !== "running") {
-            progressRef.child("status").off("value", listenForManualTermination);
-            if (status === "terminating" || status === "terminated") {
-                finished = true;
-            }
-        }
-    };
-    progressRef.child("status").on("value", listenForManualTermination);
-
-    var listenOnTopLevelStatus = function (step, snapshot) { // this is here to handle termination asked by user to signify stop of the progress and stop accepting additional logs
-        var status = snapshot.val();
-        if (status !== "running") {
-            progressRef.child("status").off("value", listenOnTopLevelStatus);
-            if ((status === "terminating" || status === "terminated") && step.status === "running") {
-                step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
-                step.status          = "terminated";
-                step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                step.firebaseRef.child("logs").push("Process terminated");
-                progressRef.child("lastUpdate").set(new Date().getTime());
-            }
-        }
-    };
-
     if (initializeStepReference) {
         var initializeStep            = {
             name: "Initializing Process",
@@ -76,7 +49,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             firebaseRef: new FirebaseLib(initializeStepReference)
         };
         steps["Initializing Process"] = initializeStep;
-        progressRef.child("status").on("value", listenOnTopLevelStatus.bind(this, initializeStep));
     }
 
     var create = function (name) {
@@ -100,9 +72,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 info: function () {
                 },
                 finish: function () {
-                },
-                ignoreTopLevelStatusEvents: function () {
-
                 }
             };
         }
@@ -131,8 +100,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             });
 
             buildManagerQueue.request({ action: "new-progress-step", jobId: jobId, name: name }); //update build model
-
-            progressRef.child("status").on("value", listenOnTopLevelStatus.bind(this, step));
         }
         else {
             step.status = "running";
@@ -157,7 +124,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
-                else if (step.status !== "terminated") {
+                else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
                 }
@@ -170,7 +137,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
-                else if (step.status !== "terminated") {
+                else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
                 }
@@ -184,7 +151,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
-                else if (step.status !== "terminated") {
+                else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
                 }
@@ -197,7 +164,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
-                else if (step.status !== "terminated") {
+                else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
                 }
@@ -219,7 +186,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     progressRef.child("lastUpdate").set(new Date().getTime());
                     handler = undefined;
                 }
-                else if (step.status !== "terminated") {
+                else {
                     if (err) {
                         self.emit("error",
                             new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
@@ -265,9 +232,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         create: create,
         finish: finish,
         fatalError: fatalError,
-        ignoreTopLevelStatusEvents: function () {
-            progressRef.child("status").off("value");
-        },
         on: self.on.bind(self)
     };
 
