@@ -120,7 +120,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 return progressRef.child('lastUpdate').toString();
             },
             addContainer: function (containerId) {
-                step.firebaseRef.child('containers').push(containerId);
+                step.firebaseRef.child('containerId').set(containerId);
             },
             write: function (message) {
                 if (fatal) {
