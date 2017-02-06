@@ -63,6 +63,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 getLastUpdateReference: function () {
 
                 },
+                addContainer: function () {
+
+                },
                 write: function () {
                 },
                 debug: function () {
@@ -115,6 +118,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             },
             getLastUpdateReference: function () {
                 return progressRef.child('lastUpdate').toString();
+            },
+            addContainer: function (containerId) {
+                progressRef.child('containers').push(containerId);
             },
             write: function (message) {
                 if (fatal) {
