@@ -28,7 +28,7 @@
     "crypto": "0.0.3",
     "lodash": "^3.10.1",
     "q": "^1.4.1",
-    "cf-queue": "git+https://github.com/codefresh-io/cf-queue.git#ef4736f7768d87dcefb0d90f48808fd4dfcedd6b",
+    "cf-queue": "git+https://github.com/codefresh-io/cf-queue.git#11696681052970ba1722244c5371e44bc291621a",
     "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1"
   }
 }
