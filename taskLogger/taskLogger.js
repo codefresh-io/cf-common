@@ -51,7 +51,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         steps["Initializing Process"] = initializeStep;
     }
 
-    var create = function (name) {
+    var create = function (name, id) {
 
         if (fatal || finished) {
             return {
@@ -76,10 +76,11 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             };
         }
 
-        var step = steps[name];
+        var step = steps[id || name];
         if (!step) {
             step = {
                 name: name,
+                id: id || '',
                 creationTimeStamp: +(new Date().getTime() / 1000).toFixed(),
                 status: "running",
                 logs: {}
@@ -87,7 +88,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             if (firstStepCreationTime && _.isEmpty(steps)) { // a workaround so api can provide the first step creation time from outside
                 step.creationTimeStamp = firstStepCreationTime;
             }
-            steps[name]      = step;
+            steps[id || name]      = step;
             var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             step.firebaseRef = stepsRef.push(step);
 
