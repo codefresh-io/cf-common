@@ -39,12 +39,8 @@ describe('taskLogger tests', function () {
 
     var createMockLogger = function (requestSpy) {
         var Logger = proxyquire('./taskLogger', {
-            'cf-queue': function () {
-                return {
-                    request: requestSpy || function () {
-                        return Q.resolve();
-                    }
-                };
+            'request-promise': function () {
+                return requestSpy || Q.resolve();
             }
         });
         return Logger;
@@ -122,19 +118,6 @@ describe('taskLogger tests', function () {
                 return Q.reject(new Error("should have failed"));
             });
 
-            it('1.1.4 should fail when not providing Firebase lib', function () {
-                var Firebase = createMockFirebase();
-                var Logger = createMockLogger();
-                try{
-                    var logger = new Logger("progress_id", null, "baseurl", Firebase, null); // jshint ignore:line
-                }
-                catch(e){
-                    expect(e.toString()).to.contain("failed to create taskLogger because queue configuration must be provided");
-                    return Q.resolve();
-                }
-                return Q.reject(new Error("should have failed"));
-            });
-
         });
 
     });
@@ -192,7 +175,7 @@ describe('taskLogger tests', function () {
             });
             var Firebase = createMockFirebase(null, null, pushSpy, null, null, null);
             var Logger     = createMockLogger(null);
-            var logger = new Logger("progress_id", firstStepCreationTime, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", firstStepCreationTime, "firebaseUrl", Firebase);
             logger.create("step1");
             logger.create("step2");
         });
@@ -209,13 +192,58 @@ describe('taskLogger tests', function () {
             });
             var Firebase = createMockFirebase(null, null, null, onSpy);
             var Logger     = createMockLogger(null);
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             logger.on("step-pushed", function(){
                 done();
             });
             logger.create("step1");
         });
 
+        it('2.5 should send to the workflow event uri an event with the new step', function (done) {
+
+            var onSpy    = sinon.spy(function (event, callback) {
+                callback({
+                    val: function () {
+                        return {
+                            name: "step1"
+                        };
+                    }
+                });
+            });
+
+            var eventSpy = sinon.spy((context) => {
+                expect(context).to.deep.equal({
+                    "body": {
+                        "action": "new-progress-step",
+                        "name": "step1"
+                    },
+                    "headers": {
+                        "x-access-token": "token"
+                    },
+                    "json": true,
+                    "method": "POST",
+                    "uri": "url"
+                });
+                return Q.resolve();
+            });
+
+            var Firebase = createMockFirebase(null, null, null, onSpy);
+            var Logger   = proxyquire('./taskLogger', {
+                'request-promise': eventSpy
+            });
+
+            var logger   = new Logger("progress_id", null, "firebaseUrl", Firebase);
+            logger.on("step-pushed", function () {
+                setTimeout(() => {
+                    expect(eventSpy).to.have.been.calledOnce; // jshint ignore:line
+                    done();
+                }, 10);
+            });
+            logger.create("step1", null, {
+                token: 'token',
+                url: 'url'
+            });
+        });
 
     });
 
@@ -225,7 +253,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.write("write message");
 
@@ -235,7 +263,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.debug("debug message");
 
@@ -245,7 +273,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.warn("warn message");
 
@@ -255,7 +283,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.info("info message");
 
@@ -265,7 +293,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.finish();
 
@@ -275,7 +303,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.finish(new Error("step error"));
 
@@ -285,7 +313,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.warn("warn message");
             stepLogger.finish();
@@ -296,7 +324,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.getReference();
         });
@@ -305,7 +333,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.getLogsReference();
         });
@@ -314,7 +342,7 @@ describe('taskLogger tests', function () {
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             stepLogger.getLastUpdateReference();
         });
@@ -326,7 +354,7 @@ describe('taskLogger tests', function () {
         it('4.1 should emit an error when triggering write handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
@@ -339,7 +367,7 @@ describe('taskLogger tests', function () {
         it('4.2 should emit an error when triggering debug handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
@@ -352,7 +380,7 @@ describe('taskLogger tests', function () {
         it('4.3 should emit an error when triggering warn handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
@@ -365,7 +393,7 @@ describe('taskLogger tests', function () {
         it('4.4 should emit an error when triggering info handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
@@ -378,7 +406,7 @@ describe('taskLogger tests', function () {
         it('4.5 should emit an error when triggering finish handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished with err");
@@ -391,7 +419,7 @@ describe('taskLogger tests', function () {
         it('4.7 should emit an error when triggering finish handler after step has finished', function(done){
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
@@ -414,7 +442,7 @@ describe('taskLogger tests', function () {
                 });
                 var Firebase = createMockFirebase(childSpy);
                 var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
                 logger.fatalError(new Error("fatal error"));
                 var stepLogger = logger.create("new step");
                 stepLogger.write("hey");
@@ -428,7 +456,7 @@ describe('taskLogger tests', function () {
                 });
                 var Firebase = createMockFirebase(childSpy);
                 var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
                 var stepLogger = logger.create("new step");
                 stepLogger.finish = sinon.spy();
                 logger.fatalError(new Error("fatal error"));
@@ -445,7 +473,7 @@ describe('taskLogger tests', function () {
                 });
                 var Firebase = createMockFirebase(childSpy);
                 var Logger = createMockLogger();
-                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase, {servers: ['address']});
+                var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
                 try {
                     logger.fatalError();
                 }
