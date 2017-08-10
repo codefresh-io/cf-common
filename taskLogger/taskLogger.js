@@ -1,11 +1,11 @@
 'use strict';
 
 var _            = require('lodash');
-var Queue        = require('cf-queue');
 var CFError      = require('cf-errors');
 var ErrorTypes   = CFError.errorTypes;
 var EventEmitter = require('events');
 var util         = require('util');
+var rp           = require('request-promise');
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -13,10 +13,9 @@ var util         = require('util');
  * @param firstStepCreationTime - optional. if provided the first step creationTime will be this value
  * @param baseFirebaseUrl - baseFirebaseUrl (pre-quisite authentication to firebase should have been made)
  * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
- * @param queueConfig - sends the build-manager an event whenever a new step is created
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, FirebaseLib, queueConfig, initializeStepReference) {
+var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, FirebaseLib, initializeStepReference) {
     var self = this;
     EventEmitter.call(self);
 
@@ -29,11 +28,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     else if (!FirebaseLib) {
         throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
     }
-    else if (!queueConfig) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because queue configuration must be provided");
-    }
 
-    var buildManagerQueue = new Queue('BuildManagerEventsQueue', queueConfig);
 
     var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
 
@@ -51,7 +46,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         steps["Initializing Process"] = initializeStep;
     }
 
-    var create = function (name, id) {
+    var create = function (name, id, eventReporting) {
 
         if (fatal || finished) {
             return {
@@ -100,7 +95,19 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 }
             });
 
-            buildManagerQueue.request({ action: "new-progress-step", jobId: jobId, name: name }); //update build model
+            if (eventReporting) {
+                var event = { action: "new-progress-step", name: name };
+                rp({
+                    uri: eventReporting.url,
+                    headers: {
+                        'x-access-token': eventReporting.token
+                    },
+                    method: 'POST',
+                    body: event,
+                    json: true
+                });
+            }
+
         }
         else {
             step.status = "running";
