@@ -1,6 +1,6 @@
 {
   "name": "cf-common",
-  "version": "0.0.14",
+  "version": "0.0.31",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,28 @@
   },
   "author": "Codefresh <admin@codefresh.io> (http://codefresh.io)",
   "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-coveralls": "^0.1.4",
+    "gulp-env": "^0.2.0",
+    "gulp-istanbul": "^0.10.4",
+    "gulp-jshint": "^1.11.0",
+    "gulp-mocha-co": "^0.4.1-co.3",
+    "gulp-rimraf": "^0.1.1",
+    "isparta": "^4.0.0",
+    "mocha": "^3.5.0",
+    "proxyquire": "^1.7.4",
+    "run-sequence": "^1.1.0",
+    "shelljs": "^0.6.0",
+    "sinon": "^1.17.4",
+    "sinon-chai": "^2.8.0"
+  },
   "dependencies": {
-    "lodash": "^3.10.0"
+    "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1",
+    "crypto": "0.0.3",
+    "lodash": "^3.10.1",
+    "q": "^1.4.1",
+    "request-promise": "^4.2.1"
   }
 }
