@@ -6,6 +6,7 @@ var ErrorTypes   = CFError.errorTypes;
 var EventEmitter = require('events');
 var util         = require('util');
 var rp           = require('request-promise');
+var Q            = require('q');
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -45,6 +46,25 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         };
         steps["Initializing Process"] = initializeStep;
     }
+
+    var addErrorMessageToEndOfSteps = function (message) {
+        var deferred = Q.defer();
+
+        var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
+        stepsRef.limitToLast(1).once('value', function (snapshot) {
+            try {
+                _.forEach(snapshot.val(), function(step, stepKey) {
+                    var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
+                    stepRef.child('logs').push(`\x1B[31m${message}\x1B[0m\r\n`);
+                });
+                deferred.resolve();
+            } catch (err) {
+                deferred.reject(err);
+            }
+        });
+
+        return deferred.promise;
+    };
 
     var create = function (name, id, eventReporting) {
 
@@ -185,7 +205,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status          = err ? "error" : "success";
                     if (err) {
-                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m`);
+                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
                         step.status = "warning";
@@ -240,7 +260,8 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         create: create,
         finish: finish,
         fatalError: fatalError,
-        on: self.on.bind(self)
+        addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
+        on: self.on.bind(self),
     };
 
 };
