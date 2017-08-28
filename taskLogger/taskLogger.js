@@ -46,6 +46,11 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         steps["Initializing Process"] = initializeStep;
     }
 
+    var addMessageToEndOfStep = function (stepId, message) {
+        var stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepId);
+        stepRef.child('logs').push(message);
+    };
+
     var create = function (name, id, eventReporting) {
 
         if (fatal || finished) {
@@ -96,7 +101,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             });
 
             if (eventReporting) {
-                var event = { action: "new-progress-step", name: name };
+                var event = { action: "new-progress-step", name: name, id: id };
                 rp({
                     uri: eventReporting.url,
                     headers: {
@@ -240,7 +245,8 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         create: create,
         finish: finish,
         fatalError: fatalError,
-        on: self.on.bind(self)
+        addMessageToEndOfStep: addMessageToEndOfStep,
+        on: self.on.bind(self),
     };
 
 };
