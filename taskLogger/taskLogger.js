@@ -223,6 +223,19 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                         self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
                     }
                 }
+            },
+            resetCreationTimeStamp: function() {
+                if (fatal) {
+                    return;
+                }
+                if (step.status === "running") {
+                    step.firebaseRef.child("creationTimeStamp").set(+(new Date().getTime() / 1000).toFixed());
+                    progressRef.child("lastUpdate").set(new Date().getTime());
+                }
+                else {
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'resetCreationTimeStamp' handler was triggered after the job finished"));
+                }
             }
         };
         return handler;
