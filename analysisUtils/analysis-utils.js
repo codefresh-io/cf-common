@@ -13,20 +13,6 @@ function removeImageTagUnsupportedChars(tag){
     return tag.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]*/, "");
 }
 
-
-function getLatestSha(user, repoOwner, repoName, branch) {
-
-    return getLatestSha(user, repoOwner, repoName, branch)
-        .then(function (commit) {
-            if (commit === null) {
-                return branch;
-            }
-            else {
-                return commit.sha;
-            }
-        });
-}
-
 function getLatestCommit(user, repoOwner, repoName, branch) {
 
     console.log(new Date() + ': Get latest commit - started');
@@ -128,7 +114,6 @@ var prepareHashInfo = function(repoOwner, repoName, branch, latestSha, settings,
 
 module.exports = {
     prepareHashInfo: prepareHashInfo,
-    getLatestSha: getLatestSha,
     getLatestCommit: getLatestCommit,
     removeImageOwnerUnsupportedChars: removeImageOwnerUnsupportedChars,
     removeImageNameUnsupportedChars: removeImageNameUnsupportedChars,
