@@ -97,7 +97,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 name: name,
                 id: id || '',
                 creationTimeStamp: +(new Date().getTime() / 1000).toFixed(),
-                status: "running",
+                status: "pending",
                 logs: {}
             };
             if (firstStepCreationTime && _.isEmpty(steps)) { // a workaround so api can provide the first step creation time from outside
@@ -130,11 +130,24 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
 
         }
         else {
-            step.status = "running";
+            step.status = "pending";
             step.firebaseRef.update({ status: step.status, finishTimeStamp: "" }); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
         }
 
         handler = {
+            start: function () {
+                if (fatal) {
+                    return;
+                }
+                if (step.status === "pending") {
+                    step.status = 'running';
+                    progressRef.child("status").set(step.status);
+                }
+                else {
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, "progress-logs 'start' handler was triggered when the step status is: %s", step.status));
+                }
+            },
             getReference: function () {
                 return step.firebaseRef.toString();
             },
@@ -148,7 +161,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -161,7 +174,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -174,7 +187,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -188,7 +201,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -197,13 +210,16 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                         new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
                 }
             },
-            finish: function (err) {
+            finish: function (err, skip) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     step.status          = err ? "error" : "success";
+                    if (skip) {
+                        step.status = 'skipped';
+                    }
                     if (err) {
                         step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
@@ -228,7 +244,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running") {
+                if (step.status === "running" || step.status === 'pending') {
                     step.firebaseRef.child("creationTimeStamp").set(+(new Date().getTime() / 1000).toFixed());
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -236,6 +252,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     self.emit("error",
                         new CFError(ErrorTypes.Error, "progress-logs 'resetCreationTimeStamp' handler was triggered after the job finished"));
                 }
+            },
+            getStatus: function() {
+                return step.status;
             }
         };
         return handler;
