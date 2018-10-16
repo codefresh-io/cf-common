@@ -45,7 +45,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     var fatal    = false;
     var finished = false;
     var steps    = {};
-    var handler;
+    var handlers = {};
 
     if (initializeStepReference) {
         var initializeStep            = {
@@ -143,7 +143,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             step.firebaseRef.update({ status: step.status, finishTimeStamp: "" }); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
         }
 
-        handler = {
+        handlers[id || name] = {
             start: function () {
                 if (fatal) {
                     return;
@@ -237,7 +237,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     }
                     step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
-                    handler = undefined;
+                    delete handlers[id || name];
                 }
                 else {
                     if (err) {
@@ -266,15 +266,17 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 return step.status;
             }
         };
-        return handler;
+        return handlers[id || name];
     };
 
-    var finish = function (err) {
+    var finish = function (err) { // jshint ignore:line
         if (fatal) {
             return;
         }
-        if (handler) {
-            handler.finish(err);
+        if (_.size(handlers)) {
+            _.forEach(handlers, (handler) => {
+                handler.finish(new Error('Unknown error occurred'));
+            });
         }
         finished = true;
     };
@@ -287,8 +289,10 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             return;
         }
 
-        if (handler) {
-            handler.finish(err);
+        if (_.size(handlers)) {
+            _.forEach(handlers, (handler) => {
+                handler.finish(new Error('Unknown error occurred'));
+            });
         }
         else {
             var errorStep = this.create("Something went wrong");
