@@ -8,6 +8,15 @@ var util         = require('util');
 var rp           = require('request-promise');
 var Q            = require('q');
 
+var STATUS = {
+    PENDING: 'pending',
+    RUNNING: 'running',
+    SUCCESS: 'success',
+    ERROR: 'error',
+    SKIPPED: 'skipped',
+    WARNING: 'warning'
+};
+
 /**
  * TaskLogger - logging for build/launch/promote jobs
  * @param jobid - progress job id
@@ -41,7 +50,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     if (initializeStepReference) {
         var initializeStep            = {
             name: "Initializing Process",
-            status: "running",
+            status: STATUS.RUNNING,
             firebaseRef: new FirebaseLib(initializeStepReference)
         };
         steps["Initializing Process"] = initializeStep;
@@ -97,7 +106,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 name: name,
                 id: id || '',
                 creationTimeStamp: +(new Date().getTime() / 1000).toFixed(),
-                status: "pending",
+                status: STATUS.PENDING,
                 logs: {}
             };
             if (firstStepCreationTime && _.isEmpty(steps)) { // a workaround so api can provide the first step creation time from outside
@@ -130,7 +139,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
 
         }
         else {
-            step.status = "pending";
+            step.status = STATUS.PENDING;
             step.firebaseRef.update({ status: step.status, finishTimeStamp: "" }); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
         }
 
@@ -139,8 +148,8 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "pending") {
-                    step.status = 'running';
+                if (step.status === STATUS.PENDING) {
+                    step.status = STATUS.RUNNING;
                     progressRef.child("status").set(step.status);
                 }
                 else {
@@ -161,7 +170,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -174,7 +183,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -187,7 +196,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -201,7 +210,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -214,17 +223,17 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
-                    step.status          = err ? "error" : "success";
+                    step.status          = err ? STATUS.ERROR : STATUS.SUCCESS;
                     if (skip) {
-                        step.status = 'skipped';
+                        step.status = STATUS.SKIPPED;
                     }
                     if (err) {
                         step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
-                        step.status = "warning";
+                        step.status = STATUS.WARNING;
                     }
                     step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -244,7 +253,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === "running" || step.status === 'pending') {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.firebaseRef.child("creationTimeStamp").set(+(new Date().getTime() / 1000).toFixed());
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
