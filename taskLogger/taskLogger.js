@@ -105,7 +105,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             step = {
                 name: name,
                 id: id || '',
-                creationTimeStamp: +(new Date().getTime() / 1000).toFixed(),
                 status: STATUS.PENDING,
                 logs: {}
             };
@@ -151,6 +150,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (step.status === STATUS.PENDING) {
                     step.status = STATUS.RUNNING;
                     step.firebaseRef.child('status').set(step.status);
+                    step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
                 else {
                     self.emit("error",
