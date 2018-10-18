@@ -367,6 +367,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
                 done();
@@ -380,6 +381,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
                 done();
@@ -393,6 +395,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
                 done();
@@ -406,6 +409,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
                 done();
@@ -419,6 +423,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished with err");
                 done();
@@ -432,6 +437,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered after the job finished");
                 expect(err.toString()).to.not.contain("with err");
@@ -446,6 +452,7 @@ describe('taskLogger tests', function () {
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
+            stepLogger.start();
             logger.on("error", function(err){
                 expect(err.toString()).to.contain("was triggered when the step status is: success");
                 expect(err.toString()).to.not.contain("with err");
@@ -468,11 +475,12 @@ describe('taskLogger tests', function () {
                 var Firebase = createMockFirebase(childSpy);
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
-                logger.fatalError(new Error("fatal error"));
                 var stepLogger = logger.create("new step");
+                stepLogger.start();
+                logger.fatalError(new Error("fatal error"));
                 stepLogger.write("hey");
                 stepLogger.getReference();
-                expect(childSpy.callCount).to.equal(2); // jshint ignore:line
+                expect(childSpy.callCount).to.equal(4); // jshint ignore:line
             });
 
             it('5.1.2 should call last step finish in case a step was created before', function(){
@@ -483,6 +491,7 @@ describe('taskLogger tests', function () {
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
                 var stepLogger = logger.create("new step");
+                stepLogger.start();
                 stepLogger.finish = sinon.spy();
                 logger.fatalError(new Error("fatal error"));
                 expect(stepLogger.finish).to.have.been.called; // jshint ignore:line

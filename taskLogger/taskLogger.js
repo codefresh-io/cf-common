@@ -220,6 +220,10 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 }
             },
             finish: function (err, skip) {
+                if (step.status === STATUS.PENDING && !skip) { // do not close a pending step that should not be skipped
+                    return;
+                }
+
                 if (fatal) {
                     return;
                 }
