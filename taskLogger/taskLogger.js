@@ -233,7 +233,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     if (skip) {
                         step.status = STATUS.SKIPPED;
                     }
-                    if (err) {
+                    if (err && err.toString() !== 'Error') {
                         step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
