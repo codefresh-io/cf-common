@@ -446,22 +446,6 @@ describe('taskLogger tests', function () {
             stepLogger.finish();
             stepLogger.finish();
         });
-
-        it('4.8 should emit an error when triggering start handler after a step has finished', function(done){
-            var Firebase = createMockFirebase();
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
-            var stepLogger = logger.create("step1");
-            stepLogger.start();
-            logger.on("error", function(err){
-                expect(err.toString()).to.contain("was triggered when the step status is: success");
-                expect(err.toString()).to.not.contain("with err");
-                done();
-            });
-            stepLogger.finish();
-            stepLogger.start();
-        });
-
     });
 
     describe('5 fatalError', function() {

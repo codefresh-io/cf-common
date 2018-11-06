@@ -148,10 +148,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     step.firebaseRef.child('status').set(step.status);
                     step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'start' handler was triggered when the step status is: %s", step.status));
-                }
             },
             getReference: function () {
                 return step.firebaseRef.toString();
