@@ -137,10 +137,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             }
 
         }
-        else {
-            step.status = STATUS.PENDING;
-            step.firebaseRef.update({ status: step.status, finishTimeStamp: "" }); //this is a workaround because we are creating multiple steps with the same name so we must reset the finishtime so that we won't show it in the ui
-        }
 
         handlers[id || name] = {
             start: function () {
