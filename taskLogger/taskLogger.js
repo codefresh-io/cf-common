@@ -50,7 +50,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     if (initializeStepReference) {
         var initializeStep            = {
             name: "Initializing Process",
-            status: STATUS.RUNNING,
+            status: STATUS.PENDING,
             firebaseRef: new FirebaseLib(initializeStepReference)
         };
         steps["Initializing Process"] = initializeStep;
