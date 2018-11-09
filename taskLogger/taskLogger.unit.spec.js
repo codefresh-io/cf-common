@@ -358,6 +358,18 @@ describe('taskLogger tests', function () {
             expect(stepLogger.getStatus()).to.equal('running');
         });
 
+        it('3.12 trigger markPreviouslyExecuted handler', function(){
+            var childSpy = sinon.spy(function () {
+                return this;
+            });
+            var Firebase = createMockFirebase(childSpy);
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
+            var stepLogger = logger.create("step1");
+            stepLogger.markPreviouslyExecuted();
+            expect(childSpy).to.have.been.calledWith('previouslyExecuted') // jshint ignore:line
+        });
+
     });
 
     describe('4 using handlers after step was finished', function(){

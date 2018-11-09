@@ -260,6 +260,13 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             },
             getStatus: function() {
                 return step.status;
+            },
+            markPreviouslyExecuted: function() {
+                if (fatal) {
+                    return;
+                }
+
+                step.firebaseRef.child('previouslyExecuted').set(true);
             }
         };
         return handlers[id || name];
