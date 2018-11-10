@@ -370,6 +370,15 @@ describe('taskLogger tests', function () {
             expect(childSpy).to.have.been.calledWith('previouslyExecuted') // jshint ignore:line
         });
 
+        it('3.13 trigger getMetricsLogsReference handler', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", null, "firebaseUrl", Firebase);
+            var stepLogger = logger.create("step1");
+            stepLogger.getMetricsLogsReference();
+        });
+
     });
 
     describe('4 using handlers after step was finished', function(){
