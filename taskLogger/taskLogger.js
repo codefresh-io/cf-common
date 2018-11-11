@@ -87,6 +87,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 getLastUpdateReference: function () {
 
                 },
+                getMetricsLogsReference: function () {
+
+                },
                 write: function () {
                 },
                 debug: function () {
@@ -157,6 +160,9 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             },
             getLastUpdateReference: function () {
                 return progressRef.child('lastUpdate').toString();
+            },
+            getMetricsLogsReference: function () {
+                return step.firebaseRef.child('metrics').child('logs').toString();
             },
             write: function (message) {
                 if (fatal) {
@@ -304,11 +310,16 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         fatal = true;
     };
 
+    var getMetricsLogsReference = function () {
+        return progressRef.child('metrics').child('logs').toString();
+    };
+
     return {
         create: create,
         finish: finish,
         fatalError: fatalError,
         addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
+        getMetricsLogsReference: getMetricsLogsReference,
         on: self.on.bind(self),
     };
 
