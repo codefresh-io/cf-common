@@ -127,7 +127,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         return deferred.promise;
     };
 
-    var create = function (name, eventReporting) {
+    var create = function (name, eventReporting, resetStatus) {
 
         if (fatal || finished) {
             return {
@@ -189,6 +189,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 });
             }
 
+        } else if (resetStatus) {
+            step.status = STATUS.PENDING;
         }
 
         handlers[name] = {
