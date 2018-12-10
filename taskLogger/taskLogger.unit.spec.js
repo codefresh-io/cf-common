@@ -8,7 +8,7 @@ chai.use(sinonChai);
 
 describe('taskLogger tests', function () {
 
-    var createMockFirebase = function (childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy) {
+    var createMockFirebase = function (childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy, toStringSpy) {
         var Firebase = function(){
             return {
                 child: childSpy || function () {
@@ -31,6 +31,9 @@ describe('taskLogger tests', function () {
                 },
                 update: updateSpy || function () {
                     return this;
+                },
+                toString: toStringSpy || function () {
+                    return 'http://firebase.com/ref'
                 }
             };
         };
@@ -214,7 +217,7 @@ describe('taskLogger tests', function () {
                     done();
                 }, 10);
             });
-            logger.create("step1", null, {
+            logger.create("step1", {
                 token: 'token',
                 url: 'url'
             });
@@ -502,15 +505,20 @@ describe('taskLogger tests', function () {
 
     });
 
-    describe.only('6 updateCurrentStepReferences', function () {
+    describe('6 updateCurrentStepReferences', function () {
 
-        it('should update correct structure of all current steps', function (done) {
+        it('should update correct structure in case of one step', function (done) {
             const setSpy = sinon.spy((value) => {
-                const x = value;
+                try {
+                    expect(value).to.deep.equal({
+                        "ref": "step1"
+                    });
+                    done();
+                } catch (err) {
+                    done(err);
+                }
             });
-            const pushSpy = sinon.spy(() => {
-               return 'http://firebase.com/mykey'
-            });
+
             const onSpy = sinon.spy((value, callback) => {
                 callback({
                     val: () => {
@@ -520,14 +528,12 @@ describe('taskLogger tests', function () {
                     }
                 });
             });
-            var Firebase = createMockFirebase(null, setSpy, pushSpy, onSpy);
+            var Firebase = createMockFirebase(null, setSpy, null, onSpy);
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", "firebaseUrl", Firebase);
             logger.create('step1');
-
-            //expect(setSpy).to.have.been.calledWith({});
-
         });
+
     });
 
 });
