@@ -14,8 +14,13 @@ var STATUS = {
     SUCCESS: 'success',
     ERROR: 'error',
     SKIPPED: 'skipped',
-    WARNING: 'warning'
+    WARNING: 'warning',
+    PENDING_APPROVAL: 'pending-approval',
+    APPROVED: 'approved',
+    DENIED: 'denied'
 };
+
+const STEPS_REFERENCES_KEY = 'stepsReferences';
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -25,7 +30,7 @@ var STATUS = {
  * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, FirebaseLib, initializeStepReference) {
+var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
     var self = this;
     EventEmitter.call(self);
 
@@ -47,14 +52,61 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     var steps    = {};
     var handlers = {};
 
-    if (initializeStepReference) {
-        var initializeStep            = {
-            name: "Initializing Process",
-            status: STATUS.PENDING,
-            firebaseRef: new FirebaseLib(initializeStepReference)
-        };
-        steps["Initializing Process"] = initializeStep;
-    }
+    const restoreExistingSteps = function () {
+        let settled = false;
+        const deferred = Q.defer();
+        progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
+            const stepsReferences = snapshot.val();
+            if (!stepsReferences) {
+                deferred.resolve();
+            }
+
+            Q.all(_.map(stepsReferences, (name, key) => {
+                const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
+                const step = {
+                    logs: {},
+                    firebaseRef: stepRef
+                };
+
+                const nameDeferred = Q.defer();
+                const statusDeferred = Q.defer();
+
+                stepRef.child('name').once('value', (snapshot) => {
+                    step.name = snapshot.val();
+                    nameDeferred.resolve();
+                });
+                stepRef.child('status').once('value', (snapshot) => {
+                    step.status = snapshot.val();
+                    statusDeferred.resolve();
+                });
+
+                return Q.all([nameDeferred.promise, statusDeferred.promise])
+                    .then(() => {
+                        steps[step.name] = step;
+                    });
+            }))
+                .then(() => {
+                    settled = true;
+                    deferred.resolve();
+                })
+                .done();
+        });
+
+        setTimeout(() => {
+            if (!settled) {
+                deferred.reject(new Error('Failed to restore steps data from firebase'));
+            }
+        }, 5000);
+        return deferred.promise;
+    };
+
+    var updateCurrentStepReferences = function () {
+        const stepsReferences = {};
+        _.forEach(steps, (step) => {
+            stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
+        });
+        progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
+    };
 
     var addErrorMessageToEndOfSteps = function (message) {
         var deferred = Q.defer();
@@ -75,7 +127,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
         return deferred.promise;
     };
 
-    var create = function (name, id, eventReporting) {
+    var create = function (name, eventReporting) {
 
         if (fatal || finished) {
             return {
@@ -103,18 +155,15 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
             };
         }
 
-        var step = steps[id || name];
+        var step = steps[name];
         if (!step) {
             step = {
                 name: name,
-                id: id || '',
                 status: STATUS.PENDING,
                 logs: {}
             };
-            if (firstStepCreationTime && _.isEmpty(steps)) { // a workaround so api can provide the first step creation time from outside
-                step.creationTimeStamp = firstStepCreationTime;
-            }
-            steps[id || name]      = step;
+
+            steps[name]      = step;
             var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             step.firebaseRef = stepsRef.push(step);
 
@@ -123,6 +172,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (val && val.name === name) {
                     step.firebaseRef.off("value");
                     self.emit("step-pushed", name);
+                    updateCurrentStepReferences();
                 }
             });
 
@@ -141,7 +191,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
 
         }
 
-        handlers[id || name] = {
+        handlers[name] = {
             start: function () {
                 if (fatal) {
                     return;
@@ -225,9 +275,13 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
-                    step.status          = err ? STATUS.ERROR : STATUS.SUCCESS;
+                    if (err) {
+                        step.status = step.status === STATUS.PENDING_APPROVAL ? STATUS.DENIED : STATUS.ERROR;
+                    } else {
+                        step.status = step.status === STATUS.PENDING_APPROVAL ? STATUS.APPROVED : STATUS.SUCCESS;
+                    }
                     if (skip) {
                         step.status = STATUS.SKIPPED;
                     }
@@ -239,7 +293,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     }
                     step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
-                    delete handlers[id || name];
+                    delete handlers[name];
                 }
                 else {
                     if (err) {
@@ -251,19 +305,6 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                     }
                 }
             },
-            resetCreationTimeStamp: function() {
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
-                    step.firebaseRef.child("creationTimeStamp").set(+(new Date().getTime() / 1000).toFixed());
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'resetCreationTimeStamp' handler was triggered after the job finished"));
-                }
-            },
             getStatus: function() {
                 return step.status;
             },
@@ -273,9 +314,18 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
                 }
 
                 step.firebaseRef.child('previouslyExecuted').set(true);
+            },
+            markPendingApproval: function() {
+                if (fatal) {
+                    return;
+                }
+
+                step.status = STATUS.PENDING_APPROVAL;
+                step.firebaseRef.child('status').set(step.status);
+                delete handlers[name];
             }
         };
-        return handlers[id || name];
+        return handlers[name];
     };
 
     var finish = function (err) { // jshint ignore:line
@@ -315,6 +365,7 @@ var TaskLogger = function (jobId, firstStepCreationTime, baseFirebaseUrl, Fireba
     };
 
     return {
+        restoreExistingSteps: restoreExistingSteps,
         create: create,
         finish: finish,
         fatalError: fatalError,
