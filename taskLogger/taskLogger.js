@@ -205,7 +205,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (step.status === STATUS.PENDING) {
                     step.status = STATUS.RUNNING;
                     step.firebaseRef.child('status').set(step.status);
-                    step.firebaseRef.child('finishTimeStamp').remove();
+                    step.firebaseRef.child('finishTimeStamp').set('');
                     step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
             },
