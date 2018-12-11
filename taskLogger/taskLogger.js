@@ -80,6 +80,10 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     statusDeferred.resolve();
                 });
 
+                if (step.status === STATUS.PENDING_APPROVAL) {
+                    step.pendingApproval = true;
+                }
+
                 return Q.all([nameDeferred.promise, statusDeferred.promise])
                     .then(() => {
                         steps[step.name] = step;
@@ -205,6 +209,15 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
             },
+            resume: function () {
+                if (fatal) {
+                    return;
+                }
+                if (step.status === STATUS.PENDING_APPROVAL) {
+                    step.status = STATUS.RUNNING;
+                    step.firebaseRef.child('status').set(step.status);
+                }
+            },
             getReference: function () {
                 return step.firebaseRef.toString();
             },
@@ -281,9 +294,9 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     if (err) {
-                        step.status = step.status === STATUS.PENDING_APPROVAL ? STATUS.DENIED : STATUS.ERROR;
+                        step.status = step.pendingApproval ? STATUS.DENIED : STATUS.ERROR;
                     } else {
-                        step.status = step.status === STATUS.PENDING_APPROVAL ? STATUS.APPROVED : STATUS.SUCCESS;
+                        step.status = step.pendingApproval ? STATUS.APPROVED : STATUS.SUCCESS;
                     }
                     if (skip) {
                         step.status = STATUS.SKIPPED;
@@ -324,6 +337,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
 
                 step.status = STATUS.PENDING_APPROVAL;
+                step.pendingApproval = true;
                 step.firebaseRef.child('status').set(step.status);
                 delete handlers[name];
             }
