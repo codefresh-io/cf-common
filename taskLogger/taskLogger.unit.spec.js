@@ -1,3 +1,4 @@
+var _ = require('lodash');
 var proxyquire = require('proxyquire').noCallThru();
 var Q          = require('q');
 var chai       = require('chai');
@@ -8,7 +9,7 @@ chai.use(sinonChai);
 
 describe('taskLogger tests', function () {
 
-    var createMockFirebase = function (childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy, toStringSpy) {
+    var createMockFirebase = function ({childSpy, setSpy, pushSpy, onSpy, removeSpy, offSpy, updateSpy, toStringSpy, onceSpy} = {}) {
         var Firebase = function(){
             return {
                 child: childSpy || function () {
@@ -23,6 +24,9 @@ describe('taskLogger tests', function () {
                 on: onSpy || function () {
                     return this;
                 },
+                once: onceSpy || function () {
+                    return this;
+                },
                 remove: removeSpy || function () {
                     return this;
                 },
@@ -33,7 +37,7 @@ describe('taskLogger tests', function () {
                     return this;
                 },
                 toString: toStringSpy || function () {
-                    return 'http://firebase.com/ref'
+                    return 'http://firebase.com/ref';
                 }
             };
         };
@@ -131,7 +135,7 @@ describe('taskLogger tests', function () {
             var removeSpy = sinon.spy(function(){
                 return this;
             });
-            var Firebase = createMockFirebase(null, null, null, null, removeSpy, null);
+            var Firebase = createMockFirebase({removeSpy});
             var Logger     = createMockLogger(null);
             var logger = new Logger("progress_id", "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
@@ -168,7 +172,7 @@ describe('taskLogger tests', function () {
                     }
                 });
             });
-            var Firebase = createMockFirebase(null, null, null, onSpy);
+            var Firebase = createMockFirebase({onSpy});
             var Logger     = createMockLogger(null);
             var logger = new Logger("progress_id", "firebaseUrl", Firebase);
             logger.on("step-pushed", function(){
@@ -205,7 +209,7 @@ describe('taskLogger tests', function () {
                 return Q.resolve();
             });
 
-            var Firebase = createMockFirebase(null, null, null, onSpy);
+            var Firebase = createMockFirebase({onSpy});
             var Logger   = proxyquire('./taskLogger', {
                 'request-promise': eventSpy
             });
@@ -340,7 +344,7 @@ describe('taskLogger tests', function () {
             var childSpy = sinon.spy(function () {
                 return this;
             });
-            var Firebase = createMockFirebase(childSpy);
+            var Firebase = createMockFirebase({childSpy});
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", "firebaseUrl", Firebase);
             var stepLogger = logger.create("step1");
@@ -455,7 +459,7 @@ describe('taskLogger tests', function () {
                 var childSpy = sinon.spy(function () {
                     return this;
                 });
-                var Firebase = createMockFirebase(childSpy);
+                var Firebase = createMockFirebase({childSpy});
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", "firebaseUrl", Firebase);
                 var stepLogger = logger.create("new step");
@@ -470,7 +474,7 @@ describe('taskLogger tests', function () {
                 var childSpy = sinon.spy(function () {
                     return this;
                 });
-                var Firebase = createMockFirebase(childSpy);
+                var Firebase = createMockFirebase({childSpy});
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", "firebaseUrl", Firebase);
                 var stepLogger = logger.create("new step");
@@ -488,7 +492,7 @@ describe('taskLogger tests', function () {
                 var childSpy = sinon.spy(function () {
                     return this;
                 });
-                var Firebase = createMockFirebase(childSpy);
+                var Firebase = createMockFirebase({childSpy});
                 var Logger = createMockLogger();
                 var logger = new Logger("progress_id", "firebaseUrl", Firebase);
                 try {
@@ -528,10 +532,114 @@ describe('taskLogger tests', function () {
                     }
                 });
             });
-            var Firebase = createMockFirebase(null, setSpy, null, onSpy);
+            var Firebase = createMockFirebase({setSpy, onSpy});
             var Logger     = createMockLogger();
             var logger = new Logger("progress_id", "firebaseUrl", Firebase);
             logger.create('step1');
+        });
+
+    });
+
+    describe('7 restoreExistingSteps', function () {
+
+        describe('positive', function () {
+            it('should not create any steps in case of a missing stepsReferences object', function () {
+                const onceSpy = sinon.spy((val, callback) => {
+                    callback({
+                        val: () => {
+                            return undefined;
+                        }
+                    });
+                });
+                var Firebase = createMockFirebase({
+                    onceSpy
+                });
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                return logger.restoreExistingSteps()
+                    .then(() => {
+                        expect(logger.steps).to.deep.equal({});
+                    });
+            });
+
+            it('should not create any steps in case of non previous existing steps', function () {
+                const onceSpy = sinon.spy((val, callback) => {
+                    callback({
+                        val: () => {
+                            return {};
+                        }
+                    });
+                });
+                var Firebase = createMockFirebase({
+                    onceSpy
+                });
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                return logger.restoreExistingSteps()
+                    .then(() => {
+                        expect(logger.steps).to.deep.equal({});
+                    });
+            });
+
+            it('should restore 2 steps', function () {
+                let it = 1;
+                const responses = {
+                    first: {
+                        'ref1': 'step1',
+                        'ref2': 'step2'
+                    },
+                    second: 'value'
+                };
+                let currentResponse = responses.first;
+                const onceSpy = sinon.spy((val, callback) => {
+                    callback({
+                        val: () => {
+                            const response = currentResponse;
+                            currentResponse = responses.second + it;
+                            it++;
+                            return response;
+                        }
+                    });
+                });
+                var Firebase = createMockFirebase({
+                    onceSpy
+                });
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                return logger.restoreExistingSteps()
+                    .then(() => {
+                        _.forEach(logger.steps, (step) => {
+                            delete step.firebaseRef;
+                        });
+                        expect(logger.steps).to.deep.equal({
+                            "value1": {
+                                "logs": {},
+                                "name": "value1",
+                                "status": "value2",
+                            },
+                            "value3": {
+                                "logs": {},
+                                "name": "value3",
+                                "status": "value4"
+                            }
+                        });
+                    });
+            });
+        });
+
+        describe('negative', function () {
+            it('should reject in case of not responding in 5 seconds', function () {
+                this.timeout(6000);
+                var Firebase = createMockFirebase();
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                return logger.restoreExistingSteps()
+                    .then(() => {
+                        throw new Error('should have failed');
+                    }, (err) => {
+                        expect(err.toString()).to.contain('Failed to restore steps metadata from Firebase');
+                    });
+            });
         });
 
     });

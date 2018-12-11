@@ -94,7 +94,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
 
         setTimeout(() => {
             if (!settled) {
-                deferred.reject(new Error('Failed to restore steps data from firebase'));
+                deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
             }
         }, 5000);
         return deferred.promise;
@@ -375,6 +375,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
         getMetricsLogsReference: getMetricsLogsReference,
         on: self.on.bind(self),
+        steps: steps // for testing purposes solely
     };
 
 };
