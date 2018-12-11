@@ -77,12 +77,11 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 });
                 stepRef.child('status').once('value', (snapshot) => {
                     step.status = snapshot.val();
+                    if (step.status === STATUS.PENDING_APPROVAL) {
+                        step.pendingApproval = true;
+                    }
                     statusDeferred.resolve();
                 });
-
-                if (step.status === STATUS.PENDING_APPROVAL) {
-                    step.pendingApproval = true;
-                }
 
                 return Q.all([nameDeferred.promise, statusDeferred.promise])
                     .then(() => {
@@ -206,6 +205,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (step.status === STATUS.PENDING) {
                     step.status = STATUS.RUNNING;
                     step.firebaseRef.child('status').set(step.status);
+                    step.firebaseRef.child('finishTimeStamp').remove();
                     step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
             },
