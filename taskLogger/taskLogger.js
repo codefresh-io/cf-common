@@ -342,7 +342,13 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 step.pendingApproval = true;
                 step.firebaseRef.child('status').set(step.status);
                 delete handlers[name];
-            }
+            },
+            updateMemoryUsage: function (time, memoryUsage) {
+                step.firebaseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+            },
+            updateCpuUsage: function (time, cpuUsage) {
+                step.firebaseRef.child('metrics').child('cpu').push({time, usage:cpuUsage});
+            },
         };
         return handlers[name];
     };
@@ -383,6 +389,14 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         return progressRef.child('metrics').child('logs').toString();
     };
 
+    const updateMemoryUsage = function (time, memoryUsage) {
+        progressRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+    };
+
+    const setMemoryLimit = function (time, limit) {
+        progressRef.child('metrics').child('limits').child('memory').push(limit);
+    };
+
     return {
         restoreExistingSteps: restoreExistingSteps,
         create: create,
@@ -391,7 +405,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
         getMetricsLogsReference: getMetricsLogsReference,
         on: self.on.bind(self),
-        steps: steps // for testing purposes solely
+        steps: steps, // for testing purposes solely
+        updateMemoryUsage: updateMemoryUsage,
     };
 
 };
