@@ -407,6 +407,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         on: self.on.bind(self),
         steps: steps, // for testing purposes solely
         updateMemoryUsage: updateMemoryUsage,
+        setMemoryLimit: setMemoryLimit,
     };
 
 };
