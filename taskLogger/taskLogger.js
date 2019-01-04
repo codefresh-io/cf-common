@@ -393,7 +393,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         progressRef.child('metrics').child('memory').push({time, usage:memoryUsage});
     };
 
-    const setMemoryLimit = function (time, limit) {
+    const setMemoryLimit = function (limitMemory) {
+        const limit = limitMemory.replace('Mi','');
         progressRef.child('metrics').child('limits').child('memory').push(limit);
     };
 
@@ -407,7 +408,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         on: self.on.bind(self),
         steps: steps, // for testing purposes solely
         updateMemoryUsage: updateMemoryUsage,
-        setMemoryLimit: setMemoryLimit,
+        setMemoryLimit: setMemoryLimit
     };
 
 };
