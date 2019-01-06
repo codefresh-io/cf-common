@@ -644,4 +644,65 @@ describe('taskLogger tests', function () {
 
     });
 
+    describe('8 updateStepMetrics', function () {
+
+        describe('8.1 updateStepMetrics', function () {
+
+            it('8.1.1 update memory usage', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase({childSpy});
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                var stepLogger = logger.create("step1");
+                stepLogger.updateMemoryUsage(0,0);
+                expect(childSpy).to.have.been.calledWith('metrics'); // jshint ignore:line
+                expect(childSpy).to.have.been.calledWith('memory'); // jshint ignore:line
+            });
+
+            it('8.1.2 update cpu usage', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase({childSpy});
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                var stepLogger = logger.create("step1");
+                stepLogger.updateCpuUsage(0,0);
+                expect(childSpy).to.have.been.calledWith('metrics'); // jshint ignore:line
+                expect(childSpy).to.have.been.calledWith('cpu'); // jshint ignore:line
+            });
+        });
+
+        describe('8.2 updateTaskMetrics', function () {
+
+            it('8.2.1 update total memory usage', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase({childSpy});
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                logger.updateMemoryUsage(0,0);
+                expect(childSpy).to.have.been.calledWith('metrics'); // jshint ignore:line
+                expect(childSpy).to.have.been.calledWith('memory'); // jshint ignore:line
+            });
+
+
+            it('8.2.2 set total memory limit', function(){
+                var childSpy = sinon.spy(function () {
+                    return this;
+                });
+                var Firebase = createMockFirebase({childSpy});
+                var Logger     = createMockLogger();
+                var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+                logger.setMemoryLimit('2000Mi');
+                expect(childSpy).to.have.been.calledWith('metrics'); // jshint ignore:line
+                expect(childSpy).to.have.been.calledWith('memory'); // jshint ignore:line
+                expect(childSpy).to.have.been.calledWith('limits'); // jshint ignore:line
+            });
+
+        });
+    });
 });
