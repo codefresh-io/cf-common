@@ -644,7 +644,7 @@ describe('taskLogger tests', function () {
 
     });
 
-    describe('8 updateStepMetrics', function () {
+    describe('8 updateMetrics', function () {
 
         describe('8.1 updateStepMetrics', function () {
 
