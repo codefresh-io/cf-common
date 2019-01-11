@@ -298,7 +298,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL || step.status === STATUS.TERMINATING) {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     if (err) {
-                        step.status = step.pendingApproval ? STATUS.DENIED : STATUS.ERROR;
+                        step.status = (step.status === STATUS.TERMINATING ? STATUS.TERMINATED : (step.pendingApproval ? STATUS.DENIED : STATUS.ERROR));
                     } else {
                         step.status = step.pendingApproval ? STATUS.APPROVED : STATUS.SUCCESS;
                     }
@@ -310,9 +310,6 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     }
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
                         step.status = STATUS.WARNING;
-                    }
-                    if (!err && step.terminating) {
-                        step.status = STATUS.TERMINATED;
                     }
                     step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -358,8 +355,6 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (step.status === STATUS.RUNNING) {
                     step.status = STATUS.TERMINATING;                    
                     step.firebaseRef.child('status').set(step.status);
-                    step.firebaseRef.child("logs").push(`Terminating step : ${step.name}` + '\r\n');
-                    step.terminating = true;
                 }
                 
             }
