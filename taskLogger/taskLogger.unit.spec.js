@@ -387,7 +387,7 @@ describe('taskLogger tests', function () {
             expect(stepLogger.getStatus()).to.equal('terminating'); 
             expect(childSpy).to.have.been.calledWith('status');
 
-        })
+        });
 
     });
 
