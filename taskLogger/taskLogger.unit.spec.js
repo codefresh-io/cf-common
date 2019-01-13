@@ -388,6 +388,22 @@ describe('taskLogger tests', function () {
             expect(childSpy).to.have.been.calledWith('status');
 
         });
+        it.only('3.16 trigger markTerminating on non running step should result in error', function() {
+            var childSpy = sinon.spy(function () {
+                return this;
+            });
+            var Firebase = createMockFirebase({childSpy});
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+            var stepLogger = logger.create("step1");
+            stepLogger.start();
+            stepLogger.finish();
+            try {
+                stepLogger.markTerminating();
+            } catch (error) {
+                expect(error.toString()).to.equal('Error: markTerminating is only allowed to step in running state status , current status : success');    
+            }
+        });
 
     });
 

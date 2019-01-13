@@ -356,6 +356,10 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     step.status = STATUS.TERMINATING;                    
                     step.firebaseRef.child('status').set(step.status);
                 }
+                else {
+                    self.emit("error",
+                        new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
+                }
                 
             }
         };
