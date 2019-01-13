@@ -213,15 +213,6 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
             },
-            resume: function () {
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.PENDING_APPROVAL) {
-                    step.status = STATUS.RUNNING;
-                    step.firebaseRef.child('status').set(step.status);
-                }
-            },
             getReference: function () {
                 return step.firebaseRef.toString();
             },
@@ -238,7 +229,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -251,7 +242,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -264,7 +255,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -278,7 +269,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -353,14 +344,14 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             },
             markTerminating: function() {
                 if (step.status === STATUS.RUNNING) {
-                    step.status = STATUS.TERMINATING;                    
+                    step.status = STATUS.TERMINATING;
                     step.firebaseRef.child('status').set(step.status);
                 }
                 else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
                 }
-                
+
             }
         };
         return handlers[name];
