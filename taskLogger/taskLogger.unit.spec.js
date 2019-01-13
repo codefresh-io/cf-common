@@ -291,7 +291,21 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.7 trigger warn handler and finish', function(){
+        it('3.7 trigger finish handler with error on step with termination status', function(){
+
+            var Firebase = createMockFirebase();
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+            var stepLogger = logger.create("step1");
+            stepLogger.start();
+            stepLogger.markTerminating();
+            stepLogger.finish(new Error("step error"));
+            expect(stepLogger.getStatus()).to.equal('terminated'); 
+
+        });
+
+
+        it('3.8 trigger warn handler and finish', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -302,7 +316,7 @@ describe('taskLogger tests', function () {
 
         });
 
-        it('3.8 trigger getReference handler', function(){
+        it('3.9 trigger getReference handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -311,7 +325,7 @@ describe('taskLogger tests', function () {
             stepLogger.getReference();
         });
 
-        it('3.9 trigger getLogsReference handler', function(){
+        it('3.10 trigger getLogsReference handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -320,7 +334,7 @@ describe('taskLogger tests', function () {
             stepLogger.getLogsReference();
         });
 
-        it('3.10 trigger getLastUpdateReference handler', function(){
+        it('3.11 trigger getLastUpdateReference handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -329,7 +343,7 @@ describe('taskLogger tests', function () {
             stepLogger.getLastUpdateReference();
         });
 
-        it('3.11 trigger start handler', function(){
+        it('3.12 trigger start handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -340,7 +354,7 @@ describe('taskLogger tests', function () {
             expect(stepLogger.getStatus()).to.equal('running');
         });
 
-        it('3.12 trigger markPreviouslyExecuted handler', function(){
+        it('3.13 trigger markPreviouslyExecuted handler', function(){
             var childSpy = sinon.spy(function () {
                 return this;
             });
@@ -352,7 +366,7 @@ describe('taskLogger tests', function () {
             expect(childSpy).to.have.been.calledWith('previouslyExecuted') // jshint ignore:line
         });
 
-        it('3.13 trigger getMetricsLogsReference handler', function(){
+        it('3.14 trigger getMetricsLogsReference handler', function(){
 
             var Firebase = createMockFirebase();
             var Logger     = createMockLogger();
@@ -360,6 +374,20 @@ describe('taskLogger tests', function () {
             var stepLogger = logger.create("step1");
             stepLogger.getMetricsLogsReference();
         });
+        it('3.15 trigger markTerminating handler', function() {
+            var childSpy = sinon.spy(function () {
+                return this;
+            });
+            var Firebase = createMockFirebase({childSpy});
+            var Logger     = createMockLogger();
+            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
+            var stepLogger = logger.create("step1");
+            stepLogger.start();
+            stepLogger.markTerminating();
+            expect(stepLogger.getStatus()).to.equal('terminating'); 
+            expect(childSpy).to.have.been.calledWith('status');
+
+        })
 
     });
 
@@ -467,7 +495,7 @@ describe('taskLogger tests', function () {
                 logger.fatalError(new Error("fatal error"));
                 stepLogger.write("hey");
                 stepLogger.getReference();
-                expect(childSpy.callCount).to.equal(4); // jshint ignore:line
+                expect(childSpy.callCount).to.equal(5); // jshint ignore:line
             });
 
             it('5.1.2 should call last step finish in case a step was created before', function(){

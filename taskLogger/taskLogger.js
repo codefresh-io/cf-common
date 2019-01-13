@@ -17,7 +17,9 @@ var STATUS = {
     WARNING: 'warning',
     PENDING_APPROVAL: 'pending-approval',
     APPROVED: 'approved',
-    DENIED: 'denied'
+    DENIED: 'denied',
+    TERMINATING: 'terminating',
+    TERMINATED: 'terminated'
 };
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
@@ -293,10 +295,10 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
+                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL || step.status === STATUS.TERMINATING) {
                     step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
                     if (err) {
-                        step.status = step.pendingApproval ? STATUS.DENIED : STATUS.ERROR;
+                        step.status = (step.status === STATUS.TERMINATING ? STATUS.TERMINATED : (step.pendingApproval ? STATUS.DENIED : STATUS.ERROR));
                     } else {
                         step.status = step.pendingApproval ? STATUS.APPROVED : STATUS.SUCCESS;
                     }
@@ -349,6 +351,13 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             updateCpuUsage: function (time, cpuUsage) {
                 step.firebaseRef.child('metrics').child('cpu').push({time, usage:cpuUsage});
             },
+            markTerminating: function() {
+                if (step.status === STATUS.RUNNING) {
+                    step.status = STATUS.TERMINATING;                    
+                    step.firebaseRef.child('status').set(step.status);
+                }
+                
+            }
         };
         return handlers[name];
     };
