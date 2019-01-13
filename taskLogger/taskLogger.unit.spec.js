@@ -388,7 +388,7 @@ describe('taskLogger tests', function () {
             expect(childSpy).to.have.been.calledWith('status');
 
         });
-        it.only('3.16 trigger markTerminating on non running step should result in error', function() {
+        it('3.16 trigger markTerminating on non running step should result in error', function() {
             var childSpy = sinon.spy(function () {
                 return this;
             });
