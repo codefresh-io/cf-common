@@ -229,7 +229,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.firebaseRef.child("logs").push(message);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -242,7 +242,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -255,7 +255,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
@@ -269,7 +269,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.firebaseRef.child("logs").push(message + '\r\n');
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
