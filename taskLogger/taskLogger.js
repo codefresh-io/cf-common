@@ -14,7 +14,6 @@ var STATUS = {
     SUCCESS: 'success',
     ERROR: 'error',
     SKIPPED: 'skipped',
-    WARNING: 'warning',
     PENDING_APPROVAL: 'pending-approval',
     APPROVED: 'approved',
     DENIED: 'denied',
@@ -256,7 +255,6 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.hasWarning = true;
                     step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     progressRef.child("lastUpdate").set(new Date().getTime());
                 }
@@ -299,9 +297,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     if (err && err.toString() !== 'Error') {
                         step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
-                    if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
-                        step.status = STATUS.WARNING;
-                    }
+
                     step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     progressRef.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
