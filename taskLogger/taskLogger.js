@@ -186,7 +186,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 rp({
                     uri: eventReporting.url,
                     headers: {
-                        'x-access-token': eventReporting.token
+                        'Authorization': eventReporting.token
                     },
                     method: 'POST',
                     body: event,
