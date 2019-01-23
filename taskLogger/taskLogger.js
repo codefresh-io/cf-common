@@ -328,6 +328,9 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             getStatus: function() {
                 return step.status;
             },
+            getName: function() {
+                return step.name;
+            },
             markPreviouslyExecuted: function() {
                 if (fatal) {
                     return;
