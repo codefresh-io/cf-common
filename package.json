@@ -30,6 +30,7 @@
   "dependencies": {
     "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1",
     "crypto": "0.0.3",
+    "jsonwebtoken": "^8.4.0",
     "lodash": "^3.10.1",
     "q": "^1.4.1",
     "request-promise": "^4.2.1"
