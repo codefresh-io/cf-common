@@ -43,6 +43,7 @@ class RedisLogger {
     constructor(opts) {
         this.config = opts.redisConfig;
         this.jobId = opts.jobId;
+        this.accountId = opts.accountId;
     }
     start(jobId) {
         this.redisClient =
@@ -106,12 +107,12 @@ class RedisLogger {
     }
     attachStep(step) {
         assert(this.jobId, 'jobId must be set');
-        const key = `${root}:${accountId}:${requestId}:steps:${step.name}`;
-        return wrapper(key);
+        const key = `${root}:${this.accountId}:${this.jobId}:steps:${step.name}`;
+        return  this._wrapper(key);
         
     }
 
-    wrapper(key) {
+    _wrapper(key) {
         return {
             push: (obj) => {
                 const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
@@ -122,7 +123,7 @@ class RedisLogger {
                 this.redisClient.hmset(key, hsetKeysValues);
             },
             child: (path) => {
-                return wrapper(`${key}/${path}`);
+                return this._wrapper(`${key}/${path}`);
             },
             set: (value) => {
                 if (typeof(value) === 'string') {
@@ -138,7 +139,7 @@ class RedisLogger {
     }
     child(name) {
         assert(this.defaultLogKey, 'no default log key');
-        return wrapper(`${this.defaultLogKey}:${name}`);
+        return this._wrapper(`${this.defaultLogKey}:${name}`);
     }
 
 }

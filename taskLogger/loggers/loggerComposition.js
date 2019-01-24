@@ -13,10 +13,10 @@ class LoggerComposition {
         });
     }
 
-    attach(container) {
+    attachContainer(container) {
         const writters = [];
         this.loggers.forEach(logger => {
-            writters.push(logger.attach(container));
+            writters.push(logger.attachContainer(container));
         });
         return {
 
@@ -30,6 +30,29 @@ class LoggerComposition {
                 writters.forEach(writter => writter.updateMetric(path, size));
             }
         };
+    }
+    attachStep(step) {
+        const writters = [];
+        this.loggers.forEach(logger => {
+            writters.push(logger.attachStep(step));
+        });
+        return this._wrapper(writters);
+        
+    }
+    _wrapper(writters) {
+        return {
+            push: (obj) => {
+                writters.forEach(writter => writter.push(obj));
+            },
+            child: (name) => {
+                const newWritters=[];
+                writters.forEach(writter => newWritters.push(writter.child(name)));
+                return this._wrapper(newWritters);
+            },
+            update: (value) => {
+                writters.forEach(writter => writter.update(value));
+            }
+        }
     }
 }
 module.exports = LoggerComposition;

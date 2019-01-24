@@ -36,7 +36,9 @@ class FirebaseLogger {
                 return;
             }
             logger.info(`Authenticated to firebase url: ${this.firebaseAuthUrl}`);
-            this.firebaseMetricsLogs = new Firebase(this.firebaseMetricsLogsUrl);
+            if (this.firebaseMetricsLogsUrl) {
+                this.firebaseMetricsLogs = new Firebase(this.firebaseMetricsLogsUrl);
+            }
             if (jobId) {
                 this.firebaseDefaultLogger = new Firebase(this.firebaseAuthUrl + jobId);
             }

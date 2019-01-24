@@ -51,54 +51,55 @@ var TaskLogger = function (jobId, loggerImpl) {
     var handlers = {};
 
     const restoreExistingSteps = function () {
-        let settled = false;
-        const deferred = Q.defer();
-        progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
-            const stepsReferences = snapshot.val();
-            if (!stepsReferences) {
-                deferred.resolve();
-            }
+        // let settled = false;
+        // const deferred = Q.defer();
+        // progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
+        //     const stepsReferences = snapshot.val();
+        //     if (!stepsReferences) {
+        //         deferred.resolve();
+        //     }
 
-            Q.all(_.map(stepsReferences, (name, key) => {
-                const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
-                const step = {
-                    logs: {},
-                    firebaseRef: stepRef
-                };
+        //     Q.all(_.map(stepsReferences, (name, key) => {
+        //         const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
+        //         const step = {
+        //             logs: {},
+        //             firebaseRef: stepRef
+        //         };
 
-                const nameDeferred = Q.defer();
-                const statusDeferred = Q.defer();
+        //         const nameDeferred = Q.defer();
+        //         const statusDeferred = Q.defer();
 
-                stepRef.child('name').once('value', (snapshot) => {
-                    step.name = snapshot.val();
-                    nameDeferred.resolve();
-                });
-                stepRef.child('status').once('value', (snapshot) => {
-                    step.status = snapshot.val();
-                    if (step.status === STATUS.PENDING_APPROVAL) {
-                        step.pendingApproval = true;
-                    }
-                    statusDeferred.resolve();
-                });
+        //         stepRef.child('name').once('value', (snapshot) => {
+        //             step.name = snapshot.val();
+        //             nameDeferred.resolve();
+        //         });
+        //         stepRef.child('status').once('value', (snapshot) => {
+        //             step.status = snapshot.val();
+        //             if (step.status === STATUS.PENDING_APPROVAL) {
+        //                 step.pendingApproval = true;
+        //             }
+        //             statusDeferred.resolve();
+        //         });
 
-                return Q.all([nameDeferred.promise, statusDeferred.promise])
-                    .then(() => {
-                        steps[step.name] = step;
-                    });
-            }))
-                .then(() => {
-                    settled = true;
-                    deferred.resolve();
-                })
-                .done();
-        });
+        //         return Q.all([nameDeferred.promise, statusDeferred.promise])
+        //             .then(() => {
+        //                 steps[step.name] = step;
+        //             });
+        //     }))
+        //         .then(() => {
+        //             settled = true;
+        //             deferred.resolve();
+        //         })
+        //         .done();
+        // });
 
-        setTimeout(() => {
-            if (!settled) {
-                deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
-            }
-        }, 5000);
-        return deferred.promise;
+        // setTimeout(() => {
+        //     if (!settled) {
+        //         deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
+        //     }
+        // }, 5000);
+        // return deferred.promise;
+        return Q.resolve();
     };
 
     var updateCurrentStepReferences = function () {
@@ -164,12 +165,13 @@ var TaskLogger = function (jobId, loggerImpl) {
                 logs: {}
             };
 
-            step.writter = this.loggerImpl.attachStep(step);
+            const writter = self.loggerImpl.attachStep(step);
 
             steps[name]      = step;
             //var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             //step.firebaseRef = stepsRef.push(step);
-            step.writter.push(step);
+            writter.push(step);
+            step.writter = writter;
 
             //OREN:TODO:Support
             // step.firebaseRef.on("value", function (snapshot) {
@@ -229,7 +231,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 return step.writter.child('logs').toString();
             },
             getLastUpdateReference: function () {
-                return this.loggerImpl.child('lastUpdate').toString();
+                return self.loggerImpl.child('lastUpdate').toString();
             },
             getMetricsLogsReference: function () {
                 return step.writter.child('metrics').child('logs').toString();
@@ -240,7 +242,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.writter.child("logs").push(message);
-                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -253,7 +255,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.writter.child("logs").push(message + '\r\n');
-                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -267,7 +269,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.hasWarning = true;
                     step.writter.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
-                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -280,7 +282,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.writter.child("logs").push(message + '\r\n');
-                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -312,7 +314,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                         step.status = STATUS.WARNING;
                     }
                     step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
                 }
                 else {
@@ -402,16 +404,16 @@ var TaskLogger = function (jobId, loggerImpl) {
     };
 
     var getMetricsLogsReference = function () {
-        return this.loggerImpl.child('metrics').child('logs').toString();
+        return self.loggerImpl.child('metrics').child('logs').toString();
     };
 
     const updateMemoryUsage = function (time, memoryUsage) {
-        this.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
+        self.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
     };
 
     const setMemoryLimit = function (limitMemory) {
         const limit = limitMemory.replace('Mi','');
-        this.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
+        self.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
     };
 
     return {
