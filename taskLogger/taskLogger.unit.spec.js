@@ -200,7 +200,7 @@ describe('taskLogger tests', function () {
                         "name": "step1"
                     },
                     "headers": {
-                        "x-access-token": "token"
+                        "Authorization": "token"
                     },
                     "json": true,
                     "method": "POST",
