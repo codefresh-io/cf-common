@@ -2,6 +2,7 @@ const logger = require('cf-logs').Logger('codefresh:containerLogger');
 const _      = require('lodash');
 const CFError                 = require('cf-errors');
 const Firebase                = require('firebase');
+const assert = require('assert').strict; 
 
 class FirebaseLogger {
 
@@ -9,6 +10,7 @@ class FirebaseLogger {
         this.firebaseAuthUrl  = opts.firebaseConfig.authUrl;
         this.firebaseSecret = opts.firebaseConfig.secret;
         this.firebaseMetricsLogsUrl = opts.firebaseConfig.metricsLogsUrl;
+        this.jobId = opts.jobId;
 
     }
 
@@ -22,7 +24,7 @@ class FirebaseLogger {
 
     }
 
-    start() {
+    start(jobId) {
 
         const authRef = new Firebase(this.firebaseAuthUrl);
         authRef.authWithCustomToken(this.firebaseSecret, (err) => {
@@ -35,11 +37,15 @@ class FirebaseLogger {
             }
             logger.info(`Authenticated to firebase url: ${this.firebaseAuthUrl}`);
             this.firebaseMetricsLogs = new Firebase(this.firebaseMetricsLogsUrl);
+            if (jobId) {
+                this.firebaseDefaultLogger = new Firebase(this.firebaseAuthUrl + jobId);
+            }
+            
 
         });
     }
 
-    attach(container) {
+    attachContainer(container) {
 
         const containerId                   = container.Id || container.id;
         const receivedFirebaseLogsUrl = _.get(container,
@@ -113,6 +119,41 @@ class FirebaseLogger {
                 firebaseMetricsLogs.child(path).set(size);
             }            
         };
+    }
+
+    attachStep(step) {
+
+        let firebaseLogger;
+        assert(this.jobId, 'jobId must be set');
+        try {
+            firebaseLogger = new Firebase(`${this.firebaseAuthUrl}${this.jobId}/steps`);
+        } catch (err) {
+            const error = new CFError({
+                cause: err,
+                message: `Failed to create a new firebase logger ref`
+            });
+            logger.error(error.toString());
+            return;
+        }
+
+        return {
+            push: (obj) => {
+                firebaseLogger.push(obj);
+            },
+            child: (name) => {
+                return firebaseLogger.child(name);
+            },
+            update: (value) => {
+                firebaseLogger.update(value);
+            }
+            
+        }
+
+    }
+
+    child (name) {
+        assert(this.firebaseDefaultLogger, 'No default logger');
+        return this.firebaseDefaultLogger.child(name);
     }
 
 }

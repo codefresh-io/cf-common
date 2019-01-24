@@ -28,26 +28,22 @@ const STEPS_REFERENCES_KEY = 'stepsReferences';
  * TaskLogger - logging for build/launch/promote jobs
  * @param jobid - progress job id
  * @param firstStepCreationTime - optional. if provided the first step creationTime will be this value
- * @param baseFirebaseUrl - baseFirebaseUrl (pre-quisite authentication to firebase should have been made)
- * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
+ * @param loggerImpl - logging implemeations (e.g. : firebase , redis)
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
+var TaskLogger = function (jobId, loggerImpl) {
     var self = this;
     EventEmitter.call(self);
 
     if (!jobId) {
         throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
     }
-    else if (!baseFirebaseUrl) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
+    else if (!loggerImpl) {
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because loggerImpl must be provided");
     }
-    else if (!FirebaseLib) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
-    }
+    this.loggerImpl = loggerImpl;
+    this.loggerImpl.start(jobId);
 
-
-    var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
 
     var fatal    = false;
     var finished = false;
@@ -168,18 +164,22 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 logs: {}
             };
 
-            steps[name]      = step;
-            var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
-            step.firebaseRef = stepsRef.push(step);
+            step.writter = this.loggerImpl.attachStep(step);
 
-            step.firebaseRef.on("value", function (snapshot) {
-                var val = snapshot.val();
-                if (val && val.name === name) {
-                    step.firebaseRef.off("value");
-                    self.emit("step-pushed", name);
-                    updateCurrentStepReferences();
-                }
-            });
+            steps[name]      = step;
+            //var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
+            //step.firebaseRef = stepsRef.push(step);
+            step.writter.push(step);
+
+            //OREN:TODO:Support
+            // step.firebaseRef.on("value", function (snapshot) {
+            //     var val = snapshot.val();
+            //     if (val && val.name === name) {
+            //         step.firebaseRef.off("value");
+            //         self.emit("step-pushed", name);
+            //         updateCurrentStepReferences();
+            //     }
+            // });
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
@@ -196,9 +196,9 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
 
         } else if (resetStatus) {
             step.status = STATUS.PENDING;
-            step.firebaseRef.child('creationTimeStamp').set('');
-            step.firebaseRef.child('finishTimeStamp').set('');
-            step.firebaseRef.child('status').set(step.status);
+            step.writter.child('creationTimeStamp').set('');
+            step.writter.child('finishTimeStamp').set('');
+            step.writter.child('status').set(step.status);
         }
 
         handlers[name] = {
@@ -208,9 +208,9 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 if (step.status === STATUS.PENDING) {
                     step.status = STATUS.RUNNING;
-                    step.firebaseRef.child('status').set(step.status);
-                    step.firebaseRef.child('finishTimeStamp').set('');
-                    step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
+                    step.writter.child('status').set(step.status);
+                    step.writter.child('finishTimeStamp').set('');
+                    step.writter.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
                 }
             },
             resume: function () {
@@ -219,28 +219,28 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 if (step.status === STATUS.PENDING_APPROVAL) {
                     step.status = STATUS.RUNNING;
-                    step.firebaseRef.child('status').set(step.status);
+                    step.writter.child('status').set(step.status);
                 }
             },
             getReference: function () {
                 return step.firebaseRef.toString();
             },
             getLogsReference: function () {
-                return step.firebaseRef.child('logs').toString();
+                return step.writter.child('logs').toString();
             },
             getLastUpdateReference: function () {
-                return progressRef.child('lastUpdate').toString();
+                return this.loggerImpl.child('lastUpdate').toString();
             },
             getMetricsLogsReference: function () {
-                return step.firebaseRef.child('metrics').child('logs').toString();
+                return step.writter.child('metrics').child('logs').toString();
             },
             write: function (message) {
                 if (fatal) {
                     return;
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
-                    step.firebaseRef.child("logs").push(message);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child("logs").push(message);
+                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -252,8 +252,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child("logs").push(message + '\r\n');
+                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -266,8 +266,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
                     step.hasWarning = true;
-                    step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
+                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -279,8 +279,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child("logs").push(message + '\r\n');
+                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -306,13 +306,13 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                         step.status = STATUS.SKIPPED;
                     }
                     if (err && err.toString() !== 'Error') {
-                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
+                        step.writter.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
                     if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
                         step.status = STATUS.WARNING;
                     }
-                    step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
+                    this.loggerImpl.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
                 }
                 else {
@@ -336,7 +336,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
 
-                step.firebaseRef.child('previouslyExecuted').set(true);
+                step.writter.child('previouslyExecuted').set(true);
             },
             markPendingApproval: function() {
                 if (fatal) {
@@ -345,19 +345,19 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
 
                 step.status = STATUS.PENDING_APPROVAL;
                 step.pendingApproval = true;
-                step.firebaseRef.child('status').set(step.status);
+                step.writter.child('status').set(step.status);
                 delete handlers[name];
             },
             updateMemoryUsage: function (time, memoryUsage) {
-                step.firebaseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+                step.writter.child('metrics').child('memory').push({time, usage:memoryUsage});
             },
             updateCpuUsage: function (time, cpuUsage) {
-                step.firebaseRef.child('metrics').child('cpu').push({time, usage:cpuUsage});
+                step.writter.child('metrics').child('cpu').push({time, usage:cpuUsage});
             },
             markTerminating: function() {
                 if (step.status === STATUS.RUNNING) {
                     step.status = STATUS.TERMINATING;                    
-                    step.firebaseRef.child('status').set(step.status);
+                    step.writter.child('status').set(step.status);
                 }
                 else {
                     self.emit("error",
@@ -402,16 +402,16 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
     };
 
     var getMetricsLogsReference = function () {
-        return progressRef.child('metrics').child('logs').toString();
+        return this.loggerImpl.child('metrics').child('logs').toString();
     };
 
     const updateMemoryUsage = function (time, memoryUsage) {
-        progressRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+        this.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
     };
 
     const setMemoryLimit = function (limitMemory) {
         const limit = limitMemory.replace('Mi','');
-        progressRef.child('metrics').child('limits').child('memory').push(limit);
+        this.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
     };
 
     return {

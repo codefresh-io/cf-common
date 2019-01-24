@@ -2,6 +2,8 @@ const redis = require('redis');
 const CFError = require('cf-errors');
 const logger = require('cf-logs').Logger('codefresh:containerLogger');
 const _ = require('lodash');
+const assert = require('assert').strict;
+
 
 const ContainerLabels = {
     VISIBILITY: 'io.codefresh.visibility',
@@ -40,8 +42,9 @@ class RedisLogger {
 
     constructor(opts) {
         this.config = opts.redisConfig;
+        this.jobId = opts.jobId;
     }
-    start() {
+    start(jobId) {
         this.redisClient =
             redis.createClient({
                 host: this.config.url,
@@ -52,6 +55,9 @@ class RedisLogger {
         this.redisClient.on('ready', () => {
             logger.info('Redis client ready');
             this.redisInitialized = true;
+            if (jobId) {
+                this.defaultLogKey = `${root}:${accountId}:${requestId}:${jobId}`;
+            }
         });
 
         this.redisClient.on('error', (err) => {
@@ -70,7 +76,7 @@ class RedisLogger {
         }
 
     }
-    attach(container) {
+    attachContainer(container) {
 
         const accountId = _.get(container,
             'Labels',
@@ -97,6 +103,42 @@ class RedisLogger {
                 this.redisClient.set(metricLogsKey, size);
             }
         };
+    }
+    attachStep(step) {
+        assert(this.jobId, 'jobId must be set');
+        const key = `${root}:${accountId}:${requestId}:steps:${step.name}`;
+        return wrapper(key);
+        
+    }
+
+    wrapper(key) {
+        return {
+            push: (obj) => {
+                const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
+                    acc.push(key);
+                    acc.push(obj[key]);
+                    return acc;
+                }, []);
+                this.redisClient.hmset(key, hsetKeysValues);
+            },
+            child: (path) => {
+                return wrapper(`${key}/${path}`);
+            },
+            set: (value) => {
+                if (typeof(value) === 'string') {
+                    this.redisClient.set(key, value);
+                }else {
+                    push(value);
+                }
+            },
+            update: (value) => {
+                set(value);
+            }
+        }
+    }
+    child(name) {
+        assert(this.defaultLogKey, 'no default log key');
+        return wrapper(`${this.defaultLogKey}:${name}`);
     }
 
 }
