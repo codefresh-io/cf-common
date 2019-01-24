@@ -7,6 +7,7 @@ var EventEmitter = require('events');
 var util         = require('util');
 var rp           = require('request-promise');
 var Q            = require('q');
+const jwt        = require('jsonwebtoken');
 
 var STATUS = {
     PENDING: 'pending',
@@ -183,11 +184,15 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
+                const headers = {};
+                try {
+                    jwt.decode(eventReporting.token) ? headers['x-access-token'] = eventReporting.token : headers.Authorization = eventReporting.token;
+                } catch (err) {
+                    headers.Authorization = eventReporting.token;
+                }
                 rp({
                     uri: eventReporting.url,
-                    headers: {
-                        'Authorization': eventReporting.token
-                    },
+                    headers,
                     method: 'POST',
                     body: event,
                     json: true
