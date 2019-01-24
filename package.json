@@ -1,6 +1,6 @@
 {
   "name": "@codefresh-io/cf-common",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
