@@ -2,7 +2,6 @@ class LoggerComposition {
     constructor(loggers) {
         this.loggers = loggers;
     }
-
     validate() {
         this.loggers.forEach(logger => {
             logger.validate();
