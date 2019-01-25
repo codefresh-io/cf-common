@@ -7,6 +7,7 @@ var EventEmitter = require('events');
 var util         = require('util');
 var rp           = require('request-promise');
 var Q            = require('q');
+const jwt        = require('jsonwebtoken');
 
 var STATUS = {
     PENDING: 'pending',
@@ -14,7 +15,6 @@ var STATUS = {
     SUCCESS: 'success',
     ERROR: 'error',
     SKIPPED: 'skipped',
-    WARNING: 'warning',
     PENDING_APPROVAL: 'pending-approval',
     APPROVED: 'approved',
     DENIED: 'denied',
@@ -185,11 +185,15 @@ var TaskLogger = function (jobId, loggerImpl) {
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
+                const headers = {};
+                try {
+                    jwt.decode(eventReporting.token) ? headers['x-access-token'] = eventReporting.token : headers.Authorization = eventReporting.token;
+                } catch (err) {
+                    headers.Authorization = eventReporting.token;
+                }
                 rp({
                     uri: eventReporting.url,
-                    headers: {
-                        'x-access-token': eventReporting.token
-                    },
+                    headers,
                     method: 'POST',
                     body: event,
                     json: true
@@ -240,7 +244,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.writter.child("logs").push(message);
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
@@ -253,7 +257,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.writter.child("logs").push(message + '\r\n');
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
@@ -266,8 +270,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
-                    step.hasWarning = true;
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.writter.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
@@ -280,7 +283,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 if (fatal) {
                     return;
                 }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING) {
+                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
                     step.writter.child("logs").push(message + '\r\n');
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
@@ -310,9 +313,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                     if (err && err.toString() !== 'Error') {
                         step.writter.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
-                    if (!err && step.hasWarning) { //this is a workaround to mark a step with warning status. we do it at the end of the step
-                        step.status = STATUS.WARNING;
-                    }
+
                     step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
@@ -358,14 +359,14 @@ var TaskLogger = function (jobId, loggerImpl) {
             },
             markTerminating: function() {
                 if (step.status === STATUS.RUNNING) {
-                    step.status = STATUS.TERMINATING;                    
+                    step.status = STATUS.TERMINATING;
                     step.writter.child('status').set(step.status);
                 }
                 else {
                     self.emit("error",
                         new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
                 }
-                
+
             }
         };
         return handlers[name];

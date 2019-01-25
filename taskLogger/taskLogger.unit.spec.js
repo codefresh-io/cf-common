@@ -181,7 +181,60 @@ describe('taskLogger tests', function () {
             logger.create("step1");
         });
 
-        it('2.4 should send to the workflow event uri an event with the new step', function (done) {
+        it('2.4 should send to the workflow event uri an event with the new step with api-key', function (done) {
+
+            var onSpy    = sinon.spy(function (event, callback) {
+                callback({
+                    val: function () {
+                        return {
+                            name: "step1"
+                        };
+                    }
+                });
+            });
+
+            var eventSpy = sinon.spy((context) => {
+                expect(context).to.deep.equal({
+                    "body": {
+                        "action": "new-progress-step",
+                        "name": "step1"
+                    },
+                    "headers": {
+                        "Authorization": "token"
+                    },
+                    "json": true,
+                    "method": "POST",
+                    "uri": "url"
+                });
+                return Q.resolve();
+            });
+
+            var tokenSpy = sinon.spy(() => {
+                return false;
+            });
+
+            var Firebase = createMockFirebase({onSpy});
+            var Logger   = proxyquire('./taskLogger', {
+                'request-promise': eventSpy,
+                'jsonwebtoken': {
+                    decode: tokenSpy,
+                }
+            });
+
+            var logger   = new Logger("progress_id", "firebaseUrl", Firebase);
+            logger.on("step-pushed", function () {
+                setTimeout(() => {
+                    expect(eventSpy).to.have.been.calledOnce; // jshint ignore:line
+                    done();
+                }, 10);
+            });
+            logger.create("step1", {
+                token: 'token',
+                url: 'url'
+            });
+        });
+
+        it('2.5 should send to the workflow event uri an event with the new step with jwt token', function (done) {
 
             var onSpy    = sinon.spy(function (event, callback) {
                 callback({
@@ -209,9 +262,16 @@ describe('taskLogger tests', function () {
                 return Q.resolve();
             });
 
+            var tokenSpy = sinon.spy(() => {
+                return true;
+            });
+
             var Firebase = createMockFirebase({onSpy});
             var Logger   = proxyquire('./taskLogger', {
-                'request-promise': eventSpy
+                'request-promise': eventSpy,
+                'jsonwebtoken': {
+                    decode: tokenSpy,
+                }
             });
 
             var logger   = new Logger("progress_id", "firebaseUrl", Firebase);
