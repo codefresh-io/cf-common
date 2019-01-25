@@ -57,7 +57,7 @@ class RedisLogger {
             logger.info('Redis client ready');
             this.redisInitialized = true;
             if (jobId) {
-                this.defaultLogKey = `${root}:${accountId}:${requestId}:${jobId}`;
+                this.defaultLogKey = `${root}:${this.accountId}:${jobId}`;
             }
         });
 
@@ -108,38 +108,47 @@ class RedisLogger {
     attachStep(step) {
         assert(this.jobId, 'jobId must be set');
         const key = `${root}:${this.accountId}:${this.jobId}:steps:${step.name}`;
-        return  this._wrapper(key);
+        return  this._wrapper(key, this, []);
         
     }
 
-    _wrapper(key) {
-        return {
+    //This function wraps repetetive calls to logging (e.g. : logger.child(x).set(y) , logger.child(x).child(y).update(z)
+    //the stack is kept as part of the clouse call and an isolated object is created for each call (wrapper object)
+    //TODO: Support nested stack
+    _wrapper(key, thisArg, stack) {
+        const wrapper =  {
             push: (obj) => {
-                const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
-                    acc.push(key);
-                    acc.push(obj[key]);
-                    return acc;
-                }, []);
-                this.redisClient.hmset(key, hsetKeysValues);
+                if (typeof(obj) !== 'object' && stack.length !== 0) {
+                    obj = {[stack.pop()]:obj};
+                }
+                if (typeof(obj) === 'object') {
+                    const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
+                        acc.push(key);
+                        acc.push(obj[key]);
+                        return acc;
+                    }, []);
+                    thisArg.redisClient.hmset(key, hsetKeysValues);
+                }else {
+                    thisArg.redisClient.set(key, obj);
+                }
+                
             },
             child: (path) => {
-                return this._wrapper(`${key}/${path}`);
+                stack.push(path);
+                return thisArg._wrapper(`${key}`, thisArg, stack);
             },
             set: (value) => {
-                if (typeof(value) === 'string') {
-                    this.redisClient.set(key, value);
-                }else {
-                    push(value);
-                }
+                wrapper.push(value);
             },
             update: (value) => {
-                set(value);
+                wrapper.set(value);
             }
         }
+        return wrapper;
     }
     child(name) {
         assert(this.defaultLogKey, 'no default log key');
-        return this._wrapper(`${this.defaultLogKey}:${name}`);
+        return this._wrapper(`${this.defaultLogKey}:${name}`, this, []);
     }
 
 }

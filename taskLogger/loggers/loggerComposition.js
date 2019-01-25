@@ -2,6 +2,7 @@ class LoggerComposition {
     constructor(loggers) {
         this.loggers = loggers;
     }
+
     validate() {
         this.loggers.forEach(logger => {
             logger.validate();
@@ -36,21 +37,30 @@ class LoggerComposition {
         this.loggers.forEach(logger => {
             writters.push(logger.attachStep(step));
         });
-        return this._wrapper(writters);
-        
+        return this._wrapper(writters, this);
+
     }
-    _wrapper(writters) {
+    child(name) {
+
+        const newWritters = [];
+        this.loggers.forEach(writter => newWritters.push(writter.child(name)));
+        return this._wrapper(newWritters, this);
+    }
+    _wrapper(writters, thisArg) {
         return {
             push: (obj) => {
                 writters.forEach(writter => writter.push(obj));
             },
             child: (name) => {
-                const newWritters=[];
+                const newWritters = [];
                 writters.forEach(writter => newWritters.push(writter.child(name)));
-                return this._wrapper(newWritters);
+                return thisArg._wrapper(newWritters, thisArg);
             },
             update: (value) => {
                 writters.forEach(writter => writter.update(value));
+            },
+            set: (value) => {
+                writters.forEach(writter => writter.push(value));
             }
         }
     }
