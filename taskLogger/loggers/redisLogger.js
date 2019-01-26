@@ -142,6 +142,12 @@ class RedisLogger {
             },
             update: (value) => {
                 wrapper.set(value);
+            },
+            toString() {
+                if (stack.length !== 0) {
+                    key = `${key}:${stack.pop()}`;
+                }
+                return key;
             }
         }
         return wrapper;
