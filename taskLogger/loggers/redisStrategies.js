@@ -3,11 +3,17 @@ class RedisFlattenStrategy {
         this.keys = keys;
     }
     push(obj, key, redisClient, stack) {
-        if (stack.length === 1 && typeof(obj) === 'string' && this.keys.has(stack[0])) {
-            redisClient.rpush(`${key}:${stack.pop()}`, obj);
+        if (this.keys.has(stack[0])) {
+            if (stack.length === 1 && typeof(obj) === 'string') {
+                redisClient.rpush(`${key}:${stack.pop()}`, obj);
+            } else {
+                while (stack.length !== 0) {
+                    key = `${key}:${stack.pop()}`;
+                }
+                redisClient.rpush(key, obj);
+            }
             return true;
         }
-            
         return false;
     }
 }

@@ -45,7 +45,7 @@ class RedisLogger {
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
         this.strategies = new ChainRedisStrategy([
-            new RedisFlattenStrategy(new Set(['_logs'])), //TODO:Inject
+            new RedisFlattenStrategy(new Set(['_logs', 'metrics'])), //TODO:Inject
             new RedisSetStratry()
         ]);
     }
