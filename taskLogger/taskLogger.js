@@ -23,6 +23,7 @@ var STATUS = {
 };
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
+const LOGS_LOCATION = '_logs';
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -118,7 +119,7 @@ var TaskLogger = function (jobId, loggerImpl) {
             try {
                 _.forEach(snapshot.val(), function(step, stepKey) {
                     var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
-                    stepRef.child('logs').push(`\x1B[31m${message}\x1B[0m\r\n`);
+                    stepRef.child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
                 });
                 deferred.resolve();
             } catch (err) {
@@ -232,20 +233,20 @@ var TaskLogger = function (jobId, loggerImpl) {
                 return step.firebaseRef.toString();
             },
             getLogsReference: function () {
-                return step.writter.child('logs').toString();
+                return step.writter.child(LOGS_LOCATION).toString();
             },
             getLastUpdateReference: function () {
                 return self.loggerImpl.child('lastUpdate').toString();
             },
             getMetricsLogsReference: function () {
-                return step.writter.child('metrics').child('logs').toString();
+                return step.writter.child('metrics').child(LOGS_LOCATION).toString();
             },
             write: function (message) {
                 if (fatal) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child("logs").push(message);
+                    step.writter.child(LOGS_LOCATION).push(message);
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
@@ -258,7 +259,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child("logs").push(message + '\r\n');
+                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
@@ -271,7 +272,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
+                    step.writter.child(LOGS_LOCATION).push(`\x1B[01;93m${message}\x1B[0m\r\n`);
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
@@ -284,7 +285,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child("logs").push(message + '\r\n');
+                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
@@ -405,7 +406,7 @@ var TaskLogger = function (jobId, loggerImpl) {
     };
 
     var getMetricsLogsReference = function () {
-        return self.loggerImpl.child('metrics').child('logs').toString();
+        return self.loggerImpl.child('metrics').child(LOGS_LOCATION).toString();
     };
 
     const updateMemoryUsage = function (time, memoryUsage) {

@@ -3,7 +3,7 @@ const CFError = require('cf-errors');
 const logger = require('cf-logs').Logger('codefresh:containerLogger');
 const _ = require('lodash');
 const assert = require('assert').strict;
-
+const {RedisFlattenStrategy, RedisSetStratry, ChainRedisStrategy} = require("./redisStrategies");
 
 const ContainerLabels = {
     VISIBILITY: 'io.codefresh.visibility',
@@ -44,6 +44,10 @@ class RedisLogger {
         this.config = opts.redisConfig;
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
+        this.strategies = new ChainRedisStrategy([
+            new RedisFlattenStrategy(new Set(['_logs'])), //TODO:Inject
+            new RedisSetStratry()
+        ]);
     }
     start(jobId) {
         this.redisClient =
@@ -118,21 +122,9 @@ class RedisLogger {
     _wrapper(key, thisArg, stack) {
         const wrapper =  {
             push: (obj) => {
-                if (typeof(obj) !== 'object' && stack.length !== 0) {
-                    obj = {[stack.pop()]:obj};
-                }
-                if (typeof(obj) === 'object') {
-                    const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
-                        acc.push(key);
-                        acc.push(obj[key]);
-                        return acc;
-                    }, []);
-                    thisArg.redisClient.hmset(key, hsetKeysValues);
-                }else {
-                    thisArg.redisClient.set(key, obj);
-                }
                 
-            },
+                this.strategies.push(obj, key, thisArg.redisClient, stack);
+                },
             child: (path) => {
                 stack.push(path);
                 return thisArg._wrapper(`${key}`, thisArg, stack);
