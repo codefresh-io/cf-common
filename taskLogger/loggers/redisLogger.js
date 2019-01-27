@@ -136,7 +136,7 @@ class RedisLogger {
                 wrapper.set(value);
             },
             toString() {
-                if (stack.length !== 0) {
+                while (stack.length !== 0) {
                     key = `${key}:${stack.pop()}`;
                 }
                 return key;
