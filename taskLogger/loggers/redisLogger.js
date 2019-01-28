@@ -86,15 +86,15 @@ class RedisLogger {
         const accountId = _.get(container,
             'Labels',
             _.get(container, 'Actor.Attributes'))[ContainerLabels.ACCOUNT_ID];
-        const requestId = _.get(container,
+        const progressId = _.get(container,
             'Labels',
-            _.get(container, 'Actor.Attributes'))[ContainerLabels.REQUEST_ID];
+            _.get(container, 'Actor.Attributes'))[ContainerLabels.PROGRESS_ID];
         const stepName = _.get(container,
             'Labels',
             _.get(container, 'Actor.Attributes'))[ContainerLabels.STEP_NAME];
 
-        const logsKey = `${root}:${accountId}:${requestId}:steps:${stepName}:logs`;
-        const lastUpdateKey = `${root}:${accountId}:${requestId}:lastupdate`;
+        const logsKey = `${root}:${accountId}:${progressId}:steps:${stepName}:logs`;
+        const lastUpdateKey = `${root}:${accountId}:${progressId}:lastupdate`;
 
         return {
             push: (message) => {
@@ -104,7 +104,7 @@ class RedisLogger {
                 this.redisClient.set(lastUpdateKey, date);
             },
             updateMetric: (path, size) => {
-                const metricLogsKey = `${accountId}:${requestId}:metrics:${path}`;
+                const metricLogsKey = `${accountId}:${progressId}:metrics:${path}`;
                 this.redisClient.set(metricLogsKey, size);
             }
         };
