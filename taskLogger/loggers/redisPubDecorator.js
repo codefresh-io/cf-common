@@ -16,8 +16,8 @@ class RedisPubDecorator {
     }
 
     start(jobId) {
-        // this.jobId = jobId;
-        this.jobId = '88fm';
+        this.jobId = jobId;
+        // this.jobId = '88fm';
         this.redisLogger.start(this.jobId);
         this.nrp.on(this.jobId, (data) => {
             console.log(`###NRP: ${data}`);
@@ -75,6 +75,9 @@ class RedisPubDecorator {
             },
             toString: () => {
                 return toBeWrappedObject.toString();
+            },
+            watch: (fn) => {
+                toBeWrappedObject.watch(fn);
             }
 
         }

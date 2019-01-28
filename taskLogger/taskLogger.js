@@ -52,6 +52,15 @@ var TaskLogger = function (jobId, loggerImpl) {
     var handlers = {};
 
     const restoreExistingSteps = function () {
+        
+        return Q.resolve().then(() => {
+            // const steps = self.loggerImpl.child('steps').children();
+            // if (steps && steps.length > 0) {
+            //     steps.reduce((steps, step) => {
+
+            //     });
+            // }
+        });
         // let settled = false;
         // const deferred = Q.defer();
         // progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
@@ -100,34 +109,40 @@ var TaskLogger = function (jobId, loggerImpl) {
         //     }
         // }, 5000);
         // return deferred.promise;
-        return Q.resolve();
+        
     };
 
-    var updateCurrentStepReferences = function () {
-        const stepsReferences = {};
-        _.forEach(steps, (step) => {
-            stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
-        });
-        progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
-    };
+    // var updateCurrentStepReferences = function () {
+    //     const stepsReferences = {};
+    //     _.forEach(steps, (step) => {
+    //         stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
+    //     });
+    //     progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
+    // };
 
     var addErrorMessageToEndOfSteps = function (message) {
-        var deferred = Q.defer();
+        // var deferred = Q.defer();
 
-        var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
-        stepsRef.limitToLast(1).once('value', function (snapshot) {
-            try {
-                _.forEach(snapshot.val(), function(step, stepKey) {
-                    var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
-                    stepRef.child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
-                });
-                deferred.resolve();
-            } catch (err) {
-                deferred.reject(err);
+        // var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
+        // stepsRef.limitToLast(1).once('value', function (snapshot) {
+        //     try {
+        //         _.forEach(snapshot.val(), function(step, stepKey) {
+        //             var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
+        //             stepRef.child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
+        //         });
+        //         deferred.resolve();
+        //     } catch (err) {
+        //         deferred.reject(err);
+        //     }
+        // });
+
+        // return deferred.promise;
+        return Q.resolve().then(() => {
+            const steps = self.loggerImpl.child('steps').children();
+            if (steps && steps.length > 0) {
+                steps[steps.length -1].child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
             }
-        });
-
-        return deferred.promise;
+        })        
     };
 
     var create = function (name, eventReporting, resetStatus) {
@@ -171,7 +186,14 @@ var TaskLogger = function (jobId, loggerImpl) {
             //var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
             //step.firebaseRef = stepsRef.push(step);
             writter.push(step);
+            self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
+                [name] : step.status
+            });
             step.writter = writter;
+            step.writter.child('status').watch((value) => {
+                self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
+            });
+            self.emit("step-pushed", name);
 
             //OREN:TODO:Support
             // step.firebaseRef.on("value", function (snapshot) {
@@ -229,7 +251,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 }
             },
             getReference: function () {
-                return step.firebaseRef.toString();
+                return step.writter.toString();
             },
             getLogsReference: function () {
                 return step.writter.child(LOGS_LOCATION).toString();

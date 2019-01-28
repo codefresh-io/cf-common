@@ -3,7 +3,11 @@ const CFError = require('cf-errors');
 const logger = require('cf-logs').Logger('codefresh:containerLogger');
 const _ = require('lodash');
 const assert = require('assert').strict;
-const {RedisFlattenStrategy, RedisSetStratry, ChainRedisStrategy} = require("./redisStrategies");
+const {
+    RedisFlattenStrategy,
+    RedisSetStratry,
+    ChainRedisStrategy
+} = require("./redisStrategies");
 
 const ContainerLabels = {
     VISIBILITY: 'io.codefresh.visibility',
@@ -48,6 +52,8 @@ class RedisLogger {
             new RedisFlattenStrategy(new Set(['_logs', 'metrics'])), //TODO:Inject
             new RedisSetStratry()
         ]);
+        this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
+        this.watachedKeys = new Map();
     }
     start(jobId) {
         this.redisClient =
@@ -60,9 +66,6 @@ class RedisLogger {
         this.redisClient.on('ready', () => {
             logger.info('Redis client ready');
             this.redisInitialized = true;
-            if (jobId) {
-                this.defaultLogKey = `${root}:${this.accountId}:${jobId}`;
-            }
         });
 
         this.redisClient.on('error', (err) => {
@@ -112,19 +115,21 @@ class RedisLogger {
     attachStep(step) {
         assert(this.jobId, 'jobId must be set');
         const key = `${root}:${this.accountId}:${this.jobId}:steps:${step.name}`;
-        return  this._wrapper(key, this, []);
-        
+        return this._wrapper(key, this, []);
+
     }
 
     //This function wraps repetetive calls to logging (e.g. : logger.child(x).set(y) , logger.child(x).child(y).update(z)
     //the stack is kept as part of the clouse call and an isolated object is created for each call (wrapper object)
     //TODO: Support nested stack
     _wrapper(key, thisArg, stack) {
-        const wrapper =  {
+        const wrapper = {
             push: (obj) => {
-                
                 this.strategies.push(obj, key, thisArg.redisClient, stack);
-                },
+                if (this.watachedKeys.has(key)) {
+                    this.watachedKeys.get(key).call(this, obj);
+                }
+            },
             child: (path) => {
                 stack.push(path);
                 return thisArg._wrapper(`${key}`, thisArg, stack);
@@ -140,14 +145,18 @@ class RedisLogger {
                     key = `${key}:${stack.pop()}`;
                 }
                 return key;
+            },
+            watch: (fn) => {
+                this.watachedKeys.set(key, fn);
             }
         }
         return wrapper;
     }
     child(name) {
         assert(this.defaultLogKey, 'no default log key');
-        return this._wrapper(`${this.defaultLogKey}:${name}`, this, []);
+        return this._wrapper(`${this.defaultLogKey}`, this, [name]);
     }
+
 
 }
 module.exports = RedisLogger;

@@ -26,6 +26,9 @@ class RedisSetStratry {
             obj = {[stack.pop()]:obj};
         }
         if (typeof(obj) === 'object') {
+            while (stack.length !== 0) {
+                key = `${key}:${stack.pop()}`;
+            }
             const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
                 acc.push(key);
                 acc.push(obj[key]);
