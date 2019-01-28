@@ -27,19 +27,31 @@ class RedisPubDecorator {
         this.redisLogger.validate();
     }
     attachContainer(container) {
-        let obj = redisLogger.attachContainer(container);
-        obj.push = function (message) {
-            obj.push(message);
-            nrp.emit(this.jobId, message);
+        let obj = this.redisLogger.attachContainer(container);
+        return {
+            push: (message) => {
+                obj.push(message);
+                this.nrp.emit(this.jobId, message);
+            },
+            setLastUpdate: (date) => {
+                obj.setLastUpdate(date);
+                this.nrp.emit(this.jobId, date);
+            },
+            updateMetric: (path, size) => {
+                obj.updateMetric(path, size);
+                // this.nrp.emit(this.jobId, )
+            }
+
 
         }
+
     }
 
     attachStep(step) {
 
         const toBeWrappedObject = this.redisLogger.attachStep(step);
         return this._wrapper(toBeWrappedObject, this);
-        
+
 
     }
     _wrapper(toBeWrappedObject, thisArg) {
@@ -71,7 +83,7 @@ class RedisPubDecorator {
     }
     child(name) {
         return this.redisLogger.child(name);
-        
+
     }
 
 

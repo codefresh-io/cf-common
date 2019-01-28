@@ -162,8 +162,7 @@ var TaskLogger = function (jobId, loggerImpl) {
         if (!step) {
             step = {
                 name: name,
-                status: STATUS.PENDING,
-                logs: {}
+                status: STATUS.PENDING
             };
 
             const writter = self.loggerImpl.attachStep(step);
