@@ -10,7 +10,7 @@ class RedisFlattenStrategy {
                 while (stack.length !== 0) {
                     key = `${key}:${stack.pop()}`;
                 }
-                redisClient.rpush(key, obj);
+                redisClient.rpush(key, JSON.stringify(obj));
             }
             return true;
         }
