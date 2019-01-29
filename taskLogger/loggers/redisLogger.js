@@ -135,16 +135,17 @@ class RedisLogger {
                 if (this.watachedKeys.has(fullKey)) {
                     this.watachedKeys.get(fullKey).call(this, obj);
                 }
+                return fullKey.substr(thisArg.defaultLogKey.length +1);
             },
             child: (path) => {
                 stack.push(path);
                 return thisArg._wrapper(`${key}`, thisArg, stack);
             },
             set: (value) => {
-                wrapper.push(value);
+                return wrapper.push(value);
             },
             update: (value) => {
-                wrapper.set(value);
+                return wrapper.set(value);
             },
             toString() {
                 while (stack.length !== 0) {

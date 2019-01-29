@@ -57,21 +57,20 @@ class RedisPubDecorator {
     _wrapper(toBeWrappedObject, thisArg) {
         const wrappingObj = {
             push: (obj) => {
-                toBeWrappedObject.push(obj);
-                console.log(`#Channel : ${this.jobId}`);
-                this.nrp.emit(this.jobId, JSON.stringify(obj));
+                const key = toBeWrappedObject.push(obj);
+                this._emit(key, obj);
             },
             child: (path) => {
                 const wrappedChild = toBeWrappedObject.child(path);
                 return thisArg._wrapper(wrappedChild, thisArg);
             },
             set: (value) => {
-                toBeWrappedObject.set(value);
-                this.nrp.emit(this.jobId, JSON.stringify(value));
+                const key = toBeWrappedObject.set(value);
+                this._emit(key, value);
             },
             update: (value) => {
-                toBeWrappedObject.update(value);
-                this.nrp.emit(this.jobId, JSON.stringify(value));
+                const key = toBeWrappedObject.update(value);
+                this._emit(key, value);
             },
             toString: () => {
                 return toBeWrappedObject.toString();
@@ -87,6 +86,27 @@ class RedisPubDecorator {
     child(name) {
         return this.redisLogger.child(name);
 
+    }
+    _emit(key, obj) {
+        
+        if (typeof(obj) === 'object') {
+            // const nameKey = Object.keys(obj).find(objKey => objKey === 'name');
+            Object.keys(obj).forEach((objKey) => {
+                if (objKey === 'name') {
+                    return;
+                }
+                this.nrp.emit(this.jobId, JSON.stringify({
+                    slot: key.replace(new RegExp(':', 'g'), '.'),
+                    payload: obj[objKey]
+                }));        
+            })
+        }else {
+            this.nrp.emit(this.jobId, JSON.stringify( {
+                slot: key.replace(new RegExp(':', 'g'), '.'),
+                payload:  obj
+            }));
+        }
+        
     }
 
 

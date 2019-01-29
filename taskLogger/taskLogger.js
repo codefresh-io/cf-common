@@ -23,7 +23,7 @@ var STATUS = {
 };
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
-const LOGS_LOCATION = '_logs';
+const LOGS_LOCATION = 'logs';
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
