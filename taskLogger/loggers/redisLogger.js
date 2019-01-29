@@ -55,7 +55,7 @@ class RedisLogger {
         this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
         this.watachedKeys = new Map();
     }
-    start(jobId) {
+    start() {
         this.redisClient =
             redis.createClient({
                 host: this.config.url,
@@ -125,9 +125,15 @@ class RedisLogger {
     _wrapper(key, thisArg, stack) {
         const wrapper = {
             push: (obj) => {
+                //TODO:HIGH:stack is internal data strcture of the logger , don't pass it
+                const stackClone = stack.slice(0);
+                let fullKey = key;
+                while (stackClone.length !== 0) {
+                    fullKey = `${fullKey}:${stackClone.pop()}`;
+                }
                 this.strategies.push(obj, key, thisArg.redisClient, stack);
-                if (this.watachedKeys.has(key)) {
-                    this.watachedKeys.get(key).call(this, obj);
+                if (this.watachedKeys.has(fullKey)) {
+                    this.watachedKeys.get(fullKey).call(this, obj);
                 }
             },
             child: (path) => {
@@ -147,6 +153,9 @@ class RedisLogger {
                 return key;
             },
             watch: (fn) => {
+                while (stack.length !== 0) {
+                    key = `${key}:${stack.pop()}`;
+                }
                 this.watachedKeys.set(key, fn);
             }
         }

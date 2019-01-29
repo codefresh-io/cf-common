@@ -187,23 +187,15 @@ var TaskLogger = function (jobId, loggerImpl) {
             //step.firebaseRef = stepsRef.push(step);
             writter.push(step);
             self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
-                [name] : step.status
+                [step.name] : step.status
             });
             step.writter = writter;
+            //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
             step.writter.child('status').watch((value) => {
                 self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
             });
             self.emit("step-pushed", name);
 
-            //OREN:TODO:Support
-            // step.firebaseRef.on("value", function (snapshot) {
-            //     var val = snapshot.val();
-            //     if (val && val.name === name) {
-            //         step.firebaseRef.off("value");
-            //         self.emit("step-pushed", name);
-            //         updateCurrentStepReferences();
-            //     }
-            // });
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
@@ -336,7 +328,9 @@ var TaskLogger = function (jobId, loggerImpl) {
                         step.writter.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
 
-                    step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
+                    // step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
+                    step.writter.child('status').set(step.status);
+                    step.writter.child('finishTimeStamp').set(step.finishTimeStamp);
                     self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
                 }
