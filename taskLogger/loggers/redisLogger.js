@@ -49,7 +49,7 @@ class RedisLogger {
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
         this.strategies = new ChainRedisStrategy([
-            new RedisFlattenStrategy(new Set(['_logs', 'metrics'])), //TODO:Inject
+            new RedisFlattenStrategy(new Set(['logs', 'metrics'])), //TODO:Inject
             new RedisSetStratry()
         ]);
         this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
@@ -60,7 +60,8 @@ class RedisLogger {
             redis.createClient({
                 host: this.config.url,
                 password: this.config.password,
-                db: this.config.db || '1'
+                db: this.config.db || '1',
+                port: this.config.port || 6379
             });
 
         this.redisClient.on('ready', () => {
@@ -102,13 +103,16 @@ class RedisLogger {
         return {
             push: (message) => {
                 this.redisClient.rpush(logsKey, message);
+                return logsKey;
             },
             setLastUpdate: (date) => {
                 this.redisClient.set(lastUpdateKey, date);
+                return lastUpdateKey;
             },
             updateMetric: (path, size) => {
                 const metricLogsKey = `${accountId}:${progressId}:metrics:${path}`;
                 this.redisClient.set(metricLogsKey, size);
+                return metricLogsKey;
             }
         };
     }
@@ -131,7 +135,9 @@ class RedisLogger {
                 while (stackClone.length !== 0) {
                     fullKey = `${fullKey}:${stackClone.pop()}`;
                 }
+                console.log(`going to push  ${JSON.stringify(obj)} to ${fullKey}`);
                 this.strategies.push(obj, key, thisArg.redisClient, stack);
+                
                 if (this.watachedKeys.has(fullKey)) {
                     this.watachedKeys.get(fullKey).call(this, obj);
                 }

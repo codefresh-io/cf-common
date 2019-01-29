@@ -7,7 +7,7 @@ class RedisPubDecorator {
         this.nrp = new NRP({
             host: opts.redisConfig.url,
             auth: opts.redisConfig.password,
-            port: 6379,
+            port: opts.redisConfig.port,
             scope: scope
 
         })
@@ -16,8 +16,8 @@ class RedisPubDecorator {
     }
 
     start(jobId) {
-        this.jobId = jobId;
-        // this.jobId = '88fm';
+        //this.jobId = jobId;
+        this.jobId = '88fm';
         this.redisLogger.start(this.jobId);
         this.nrp.on(this.jobId, (data) => {
             console.log(`###NRP: ${data}`);
@@ -30,16 +30,16 @@ class RedisPubDecorator {
         let obj = this.redisLogger.attachContainer(container);
         return {
             push: (message) => {
-                obj.push(message);
-                this.nrp.emit(this.jobId, message);
+                const key = obj.push(message);
+                this._emit(key, message);
             },
             setLastUpdate: (date) => {
-                obj.setLastUpdate(date);
-                this.nrp.emit(this.jobId, date);
+                const key = obj.setLastUpdate(date);
+                this._emit(key, date);
             },
             updateMetric: (path, size) => {
-                obj.updateMetric(path, size);
-                // this.nrp.emit(this.jobId, )
+                const key = obj.updateMetric(path, size);
+                this._emit(key, size);
             }
 
 
@@ -97,13 +97,15 @@ class RedisPubDecorator {
                 }
                 this.nrp.emit(this.jobId, JSON.stringify({
                     slot: key.replace(new RegExp(':', 'g'), '.'),
-                    payload: obj[objKey]
+                    payload: obj[objKey],
+                    action: 'r'
                 }));        
             })
         }else {
             this.nrp.emit(this.jobId, JSON.stringify( {
                 slot: key.replace(new RegExp(':', 'g'), '.'),
-                payload:  obj
+                payload:  obj,
+                action: 'e'
             }));
         }
         
