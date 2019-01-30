@@ -48,11 +48,11 @@ class RedisLogger {
         this.config = opts.redisConfig;
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
+        this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
         this.strategies = new ChainRedisStrategy([
-            new RedisFlattenStrategy(new Set(['logs', 'metrics'])), //TODO:Inject
+            new RedisFlattenStrategy(new Set(['logs', 'metrics']), this.defaultLogKey), //TODO:Inject
             new RedisSetStratry()
         ]);
-        this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
         this.watachedKeys = new Map();
     }
     start() {
