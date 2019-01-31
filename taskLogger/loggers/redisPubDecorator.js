@@ -16,8 +16,8 @@ class RedisPubDecorator {
     }
 
     start(jobId) {
-        //this.jobId = jobId;
-        this.jobId = '88fm';
+        this.jobId = jobId;
+        // this.jobId = '88fm';
         this.redisLogger.start(this.jobId);
         this.nrp.on(this.jobId, (data) => {
             console.log(`###NRP: ${data}`);
@@ -104,7 +104,7 @@ class RedisPubDecorator {
             // })
 
             this.nrp.emit(this.jobId, JSON.stringify({
-                        slot: key.key.replace(new RegExp(':', 'g'), '.'),
+                        slot: this._reFormatKey(key.key),
                         payload:  obj,
                         action: 'r',
                         ...(key.id > 0 && {id : key.id})
@@ -112,13 +112,17 @@ class RedisPubDecorator {
 
         }else {
             this.nrp.emit(this.jobId, JSON.stringify( {
-                slot: key.key.replace(new RegExp(':', 'g'), '.'),
+                slot: this._reFormatKey(key.key),
                 payload:  obj,
                 action: 'e',
                 ...(key.id > 0 && {id : key.id})
             }));
         }
         
+    }
+
+    _reFormatKey(key) {
+        return key.replace(new RegExp(':', 'g'), '.').replace('.', '');
     }
 
 

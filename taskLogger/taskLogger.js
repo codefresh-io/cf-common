@@ -50,6 +50,7 @@ var TaskLogger = function (jobId, loggerImpl) {
     var finished = false;
     var steps    = {};
     var handlers = {};
+    var stepIndex = 0;
 
     const restoreExistingSteps = function () {
         
@@ -177,7 +178,8 @@ var TaskLogger = function (jobId, loggerImpl) {
         if (!step) {
             step = {
                 name: name,
-                status: STATUS.PENDING
+                status: STATUS.PENDING,
+                index: stepIndex++
             };
 
             const writter = self.loggerImpl.attachStep(step);
