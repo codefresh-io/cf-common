@@ -1,5 +1,6 @@
 const COUNTER_INDEX = 'counter';
 const CONSOLIDATED = 'consolidated';
+const MOVE_FORWARD = -1;
 class RedisFlattenStrategy {
     constructor(keys, baseKey) {
         this.keys = keys;
@@ -16,10 +17,11 @@ class RedisFlattenStrategy {
                     slot: key.substr(this.baseKey.length+1).replace(new RegExp(':', 'g'), '.'),
                     payload: obj 
                 }
-                redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, this.counter++, JSON.stringify(objToPush));
-            return true;
+                this.counter++;
+                redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, this.counter, JSON.stringify(objToPush));
+            return this.counter;
         }
-        return false;
+        return MOVE_FORWARD;
     }
 }
 
@@ -37,9 +39,9 @@ class RedisArrayStrategy {
                 }
                 redisClient.rpush(key, JSON.stringify(obj));
             }
-            return true;
+            return 1;
         }
-        return false;
+        return MOVE_FORWARD;
     }
 }
 
@@ -65,7 +67,7 @@ class RedisSetStratry {
         } else {
             redisClient.set(key, obj);
         }
-        return true;
+        return 0;
 
     }
 }
@@ -76,9 +78,18 @@ class ChainRedisStrategy {
         this.strategies = strategies;
     }
     push(obj, key, redisClient, stack) {
-        this.strategies.some((strategy) => {
-            return strategy.push(obj, key, redisClient, stack);
-        });
+        let id;
+        
+        this.strategies.some(strategy => {
+            const result = strategy.push(obj, key, redisClient, stack);
+            const strategyExecuted = result > 0;
+            if (strategyExecuted) {
+                id = result;
+               return true;
+            }
+            return false;
+        })
+        return id;
     }
 }
 module.exports = {

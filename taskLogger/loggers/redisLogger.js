@@ -102,14 +102,15 @@ class RedisLogger {
 
         return {
             push: (message) => {
-                this.redisClient.rpush(logsKey, message);
-                return logsKey;
+                return this._wrapper(logsKey, this, []).push(message);
             },
             setLastUpdate: (date) => {
+                //TODO:High : mvoe to wrapper
                 this.redisClient.set(lastUpdateKey, date);
                 return lastUpdateKey;
             },
             updateMetric: (path, size) => {
+                //TODO:High : mvoe to wrapper
                 const metricLogsKey = `${accountId}:${progressId}:metrics:${path}`;
                 this.redisClient.set(metricLogsKey, size);
                 return metricLogsKey;
@@ -125,7 +126,6 @@ class RedisLogger {
 
     //This function wraps repetetive calls to logging (e.g. : logger.child(x).set(y) , logger.child(x).child(y).update(z)
     //the stack is kept as part of the clouse call and an isolated object is created for each call (wrapper object)
-    //TODO: Support nested stack
     _wrapper(key, thisArg, stack) {
         const wrapper = {
             push: (obj) => {
@@ -136,12 +136,16 @@ class RedisLogger {
                     fullKey = `${fullKey}:${stackClone.pop()}`;
                 }
                 console.log(`going to push  ${JSON.stringify(obj)} to ${fullKey}`);
-                this.strategies.push(obj, key, thisArg.redisClient, stack);
+                const receveidId = this.strategies.push(obj, key, thisArg.redisClient, stack);
                 
+                //Watch support:
                 if (this.watachedKeys.has(fullKey)) {
                     this.watachedKeys.get(fullKey).call(this, obj);
                 }
-                return fullKey.substr(thisArg.defaultLogKey.length +1);
+                return {
+                        key: fullKey.substr(thisArg.defaultLogKey.length +1),
+                        id: receveidId
+                }
             },
             child: (path) => {
                 stack.push(path);
