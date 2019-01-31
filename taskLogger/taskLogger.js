@@ -179,9 +179,10 @@ var TaskLogger = function (jobId, loggerImpl) {
             step = {
                 name: name,
                 status: STATUS.PENDING,
-                index: stepIndex++
+                index: stepIndex
             };
 
+            stepIndex++;
             const writter = self.loggerImpl.attachStep(step);
 
             steps[name]      = step;

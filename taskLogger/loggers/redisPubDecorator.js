@@ -106,7 +106,7 @@ class RedisPubDecorator {
             this.nrp.emit(this.jobId, JSON.stringify({
                         slot: this._reFormatKey(key.key),
                         payload:  obj,
-                        action: 'r',
+                        action:  this._getAction(key.key),
                         ...(key.id > 0 && {id : key.id})
                     }));  
 
@@ -114,7 +114,7 @@ class RedisPubDecorator {
             this.nrp.emit(this.jobId, JSON.stringify( {
                 slot: this._reFormatKey(key.key),
                 payload:  obj,
-                action: 'e',
+                action:  this._getAction(key.key),
                 ...(key.id > 0 && {id : key.id})
             }));
         }
@@ -123,6 +123,9 @@ class RedisPubDecorator {
 
     _reFormatKey(key) {
         return key.replace(new RegExp(':', 'g'), '.').replace('.', '');
+    }
+    _getAction(key = "") {
+        return key.endsWith('logs') ? 'e' : 'r';
     }
 
 
