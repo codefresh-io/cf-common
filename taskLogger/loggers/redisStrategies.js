@@ -1,25 +1,27 @@
-const COUNTER_INDEX = 'counter';
+const _ = require('lodash');
 const CONSOLIDATED = 'consolidated';
 const MOVE_FORWARD = -1;
 class RedisFlattenStrategy {
     constructor(keys, baseKey) {
         this.keys = keys;
         this.baseKey = baseKey;
-        this.counter=0;
+
 
     }
     push(obj, key, redisClient, stack) {
-        if (this.keys.has(stack[0])) {
-                while (stack.length !== 0) {
-                    key = `${key}:${stack.pop()}`;
-                }
-                const objToPush = {
-                    slot: key.substr(this.baseKey.length+1).replace(new RegExp(':', 'g'), '.'),
-                    payload: obj 
-                }
-                this.counter++;
-                redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, this.counter, JSON.stringify(objToPush));
-            return this.counter;
+        const lastKeyPart = _.last(key.split(':'));
+        const keyInKeysSet =  [stack[0], lastKeyPart].some(this.keys.has.bind(this.keys));
+        if (keyInKeysSet) {
+            while (stack.length !== 0) {
+                key = `${key}:${stack.pop()}`;
+            }
+            const objToPush = {
+                slot: key.substr(this.baseKey.length + 1).replace(new RegExp(':', 'g'), '.'),
+                payload: obj
+            }
+            const timeNow = Date.now();
+            redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, timeNow, JSON.stringify(objToPush));
+            return timeNow;
         }
         return MOVE_FORWARD;
     }
@@ -31,7 +33,7 @@ class RedisArrayStrategy {
     }
     push(obj, key, redisClient, stack) {
         if (this.keys.has(stack[0])) {
-            if (stack.length === 1 && typeof(obj) === 'string') {
+            if (stack.length === 1 && typeof (obj) === 'string') {
                 redisClient.rpush(`${key}:${stack.pop()}`, obj);
             } else {
                 while (stack.length !== 0) {
@@ -79,13 +81,13 @@ class ChainRedisStrategy {
     }
     push(obj, key, redisClient, stack) {
         let id;
-        
+
         this.strategies.some(strategy => {
             const result = strategy.push(obj, key, redisClient, stack);
             const strategyExecuted = result > 0;
             if (strategyExecuted) {
                 id = result;
-               return true;
+                return true;
             }
             return false;
         })

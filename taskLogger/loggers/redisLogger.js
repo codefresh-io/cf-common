@@ -36,7 +36,7 @@ const ContainerLabels = {
     COMPOSE_SERVICE: 'com.docker.compose.service',
     APPLICATION_PORT: 'io.codefresh.applicationPort',
     STEP_CONTROLLER: 'io.codefresh.stepController',
-    STEP_NAME: 'io.codefresh.stepName',
+    STEP_LOGS_REFERENCE: 'io.codefresh.step.logRef',
     SWARM_ID: 'com.docker.swarm.id'
 };
 
@@ -49,12 +49,20 @@ class RedisLogger {
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
         this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
-        this.strategies = new ChainRedisStrategy([
-            new RedisFlattenStrategy(new Set(['logs', 'metrics']), this.defaultLogKey), //TODO:Inject
-            new RedisSetStratry()
-        ]);
+        this._setStrategies(this.defaultLogKey);
         this.watachedKeys = new Map();
     }
+
+    _setStrategies(baseKey) {
+        if (baseKey) {
+            this.strategies = new ChainRedisStrategy([
+                new RedisFlattenStrategy(new Set(['logs', 'metrics']), baseKey), //TODO:Inject
+                new RedisSetStratry()
+            ]);
+        }
+        
+    }
+
     start() {
         this.redisClient =
             redis.createClient({
@@ -93,16 +101,17 @@ class RedisLogger {
         const progressId = _.get(container,
             'Labels',
             _.get(container, 'Actor.Attributes'))[ContainerLabels.PROGRESS_ID];
-        const stepName = _.get(container,
+        const logsRefKey = _.get(container,
             'Labels',
-            _.get(container, 'Actor.Attributes'))[ContainerLabels.STEP_NAME];
+            _.get(container, 'Actor.Attributes'))[ContainerLabels.STEP_LOGS_REFERENCE];
 
-        const logsKey = `${root}:${accountId}:${progressId}:steps:${stepName}:logs`;
+        this.defaultLogKey = `${root}:${accountId}:${progressId}`;
+        this._setStrategies(this.defaultLogKey);
         const lastUpdateKey = `${root}:${accountId}:${progressId}:lastupdate`;
 
         return {
             push: (message) => {
-                return this._wrapper(logsKey, this, []).push(message);
+                return this._wrapper(logsRefKey, this, []).push(message);
             },
             setLastUpdate: (date) => {
                 //TODO:High : mvoe to wrapper
