@@ -16,7 +16,7 @@ class RedisPubDecorator {
     }
 
     start(jobId) {
-        if (!this.job) {
+        if (jobId) {
             this.jobId = jobId;
         }
         this.redisLogger.start(this.jobId);
@@ -29,6 +29,7 @@ class RedisPubDecorator {
     }
     attachContainer(container) {
         let obj = this.redisLogger.attachContainer(container);
+        this.jobId = obj.jobId();
         return {
             push: (message) => {
                 const key = obj.push(message);

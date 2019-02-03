@@ -105,6 +105,7 @@ class RedisLogger {
             'Labels',
             _.get(container, 'Actor.Attributes'))[ContainerLabels.STEP_LOGS_REFERENCE];
 
+        this.jobId = progressId;
         this.defaultLogKey = `${root}:${accountId}:${progressId}`;
         this._setStrategies(this.defaultLogKey);
         const lastUpdateKey = `${root}:${accountId}:${progressId}:lastupdate`;
@@ -119,6 +120,9 @@ class RedisLogger {
             updateMetric: (path, size) => {
                 const metricLogsKey = `${root}:${accountId}:${progressId}:metrics:${path}`;
                 return this._wrapper(metricLogsKey, this, []).set(size);
+            },
+            jobId: () => {
+                return this.jobId;
             }
         };
     }
@@ -163,17 +167,31 @@ class RedisLogger {
                 return wrapper.set(value);
             },
             toString() {
-                while (stack.length !== 0) {
-                    key = `${key}:${stack.pop()}`;
-                }
+                wrapper._updateKeyFromStack();
                 return key;
             },
             watch: (fn) => {
+                wrapper._updateKeyFromStack();
+                this.watachedKeys.set(key, fn);
+            },
+            getHash: () => {
+                wrapper._updateKeyFromStack();
+                return new Promise((resolve, reject) => {
+                    this.redisClient.hgetall(key, (err, keys) => {
+                        if (err) {
+                            reject(err);
+                        }else {
+                            resolve(keys);
+                        }
+                    });
+                }); 
+            },
+            _updateKeyFromStack() {
                 while (stack.length !== 0) {
                     key = `${key}:${stack.pop()}`;
                 }
-                this.watachedKeys.set(key, fn);
             }
+            
         }
         return wrapper;
     }
