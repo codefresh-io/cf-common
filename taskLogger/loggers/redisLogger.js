@@ -114,15 +114,11 @@ class RedisLogger {
                 return this._wrapper(logsRefKey, this, []).push(message);
             },
             setLastUpdate: (date) => {
-                //TODO:High : mvoe to wrapper
-                this.redisClient.set(lastUpdateKey, date);
-                return lastUpdateKey;
+                return this._wrapper(lastUpdateKey, this, []).set(date);
             },
             updateMetric: (path, size) => {
-                //TODO:High : mvoe to wrapper
-                const metricLogsKey = `${accountId}:${progressId}:metrics:${path}`;
-                this.redisClient.set(metricLogsKey, size);
-                return metricLogsKey;
+                const metricLogsKey = `${root}:${accountId}:${progressId}:metrics:${path}`;
+                return this._wrapper(metricLogsKey, this, []).set(size);
             }
         };
     }
