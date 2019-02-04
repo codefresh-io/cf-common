@@ -51,6 +51,7 @@ var TaskLogger = function (jobId, loggerImpl) {
     var steps    = {};
 
     var handlers = {};
+    var stepRefIndex = 0;
 
     const restoreExistingSteps = function () {
         
@@ -436,6 +437,11 @@ var TaskLogger = function (jobId, loggerImpl) {
     };
 
     const initStep = function(step, fullInit) {
+        if (!step.index){
+            //TODO: Potential BUG - support indexes on step refrences
+            step.index = stepRefIndex;
+            stepRefIndex++;
+        }
         const writter = self.loggerImpl.attachStep(step);
         const name = step.name;
         if (fullInit) {
@@ -445,7 +451,7 @@ var TaskLogger = function (jobId, loggerImpl) {
                 [name] : step.status
             });
             self.emit("step-pushed", name);
-        }
+        } 
         step.writter = writter;
         //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
         step.writter.child('status').watch((value) => {

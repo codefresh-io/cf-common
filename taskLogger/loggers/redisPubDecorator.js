@@ -79,6 +79,9 @@ class RedisPubDecorator {
             },
             watch: (fn) => {
                 toBeWrappedObject.watch(fn);
+            },
+            getHash: () => {
+                return toBeWrappedObject.getHash();
             }
 
         }
@@ -86,7 +89,7 @@ class RedisPubDecorator {
 
     }
     child(name) {
-        return this.redisLogger.child(name);
+        return this._wrapper(this.redisLogger.child(name), this);
 
     }
     _emit(key, obj) {
