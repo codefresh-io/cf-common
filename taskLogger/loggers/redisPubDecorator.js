@@ -92,19 +92,6 @@ class RedisPubDecorator {
     _emit(key, obj) {
         
         if (typeof(obj) === 'object') {
-            // const nameKey = Object.keys(obj).find(objKey => objKey === 'name');
-            // Object.keys(obj).forEach((objKey) => {
-            //     if (objKey === 'name') {
-            //         return;
-            //     }
-            //     this.nrp.emit(this.jobId, JSON.stringify({
-            //         slot: key.key.replace(new RegExp(':', 'g'), '.'),
-            //         payload: obj[objKey],
-            //         action: 'r',
-            //         id: key.id
-            //     }));        
-            // })
-
             this.nrp.emit(this.jobId, JSON.stringify({
                         slot: this._reFormatKey(key.key),
                         payload:  obj,

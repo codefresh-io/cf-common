@@ -51,7 +51,6 @@ var TaskLogger = function (jobId, loggerImpl) {
     var steps    = {};
 
     var handlers = {};
-    var stepIndex = 0;
 
     const restoreExistingSteps = function () {
         
@@ -192,27 +191,11 @@ var TaskLogger = function (jobId, loggerImpl) {
             step = {
                 name: name,
                 status: STATUS.PENDING,
-                index: stepIndex
+                index: Object.keys(steps).length
             };
 
-            stepIndex++;
-            const writter = self.loggerImpl.attachStep(step);
-
-            steps[name]      = step;
-            //var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
-            //step.firebaseRef = stepsRef.push(step);
-            writter.push(step);
-            self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
-                [step.name] : step.status
-            });
-            step.writter = writter;
-            //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
-            step.writter.child('status').watch((value) => {
-                self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
-            });
-            self.emit("step-pushed", name);
-
-
+            
+            initStep(step, true);
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
                 const headers = {};
@@ -230,12 +213,15 @@ var TaskLogger = function (jobId, loggerImpl) {
                 });
             }
 
-        } else if (resetStatus) {
-            step.status = STATUS.PENDING;
-            step.writter.child('creationTimeStamp').set('');
-            step.writter.child('finishTimeStamp').set('');
-            step.writter.child('status').set(step.status);
-        }
+        } else {
+            initStep(step);
+            if (resetStatus) {
+                step.status = STATUS.PENDING;
+                step.writter.child('creationTimeStamp').set('');
+                step.writter.child('finishTimeStamp').set('');
+                step.writter.child('status').set(step.status);
+            }
+    }
 
         handlers[name] = {
             start: function () {
@@ -448,6 +434,24 @@ var TaskLogger = function (jobId, loggerImpl) {
         const limit = limitMemory.replace('Mi','');
         self.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
     };
+
+    const initStep = function(step, fullInit) {
+        const writter = self.loggerImpl.attachStep(step);
+        const name = step.name;
+        if (fullInit) {
+            writter.push(step);
+            steps[step.name] = step;
+            self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
+                [name] : step.status
+            });
+            self.emit("step-pushed", name);
+        }
+        step.writter = writter;
+        //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
+        step.writter.child('status').watch((value) => {
+            self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
+        });
+    }
 
     return {
         restoreExistingSteps: restoreExistingSteps,
