@@ -49,19 +49,32 @@ var TaskLogger = function (jobId, loggerImpl) {
     var fatal    = false;
     var finished = false;
     var steps    = {};
+
     var handlers = {};
     var stepIndex = 0;
 
     const restoreExistingSteps = function () {
         
         return Q.resolve().then(() => {
-            // const steps = self.loggerImpl.child('steps').children();
-            // if (steps && steps.length > 0) {
-            //     steps.reduce((steps, step) => {
+            
+            //Note !! This is Redis specifc code
+            return self.loggerImpl.child(STEPS_REFERENCES_KEY).getHash();
 
-            //     });
-            // }
-        });
+        }).then((keyToStatus) => {
+            if (keyToStatus) {
+                const stepFromRedis = Object.keys(keyToStatus);
+                steps = stepFromRedis.reduce((acc, current) => {
+                    acc[current] = {
+                        status: keyToStatus[current],
+                        name: current,
+                        ...(keyToStatus[current] === STATUS.PENDING_APPROVAL && {pendingApproval : true})
+                    }
+                    return acc;
+                    
+                },{});
+            }
+        }).thenResolve();
+        
         // let settled = false;
         // const deferred = Q.defer();
         // progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
