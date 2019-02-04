@@ -90,28 +90,19 @@ class RedisPubDecorator {
 
     }
     _emit(key, obj) {
-        
-        if (typeof(obj) === 'object') {
+    
             this.nrp.emit(this.jobId, JSON.stringify({
-                        slot: this._reFormatKey(key.key),
-                        payload:  obj,
-                        action:  this._getAction(key.key),
-                        ...(key.id > 0 && {id : key.id})
-                    }));  
-
-        }else {
-            this.nrp.emit(this.jobId, JSON.stringify( {
                 slot: this._reFormatKey(key.key),
                 payload:  obj,
                 action:  this._getAction(key.key),
                 ...(key.id > 0 && {id : key.id})
             }));
-        }
+
         
     }
 
     _reFormatKey(key) {
-        return key.replace(new RegExp(':', 'g'), '.').replace('.', '');
+        return key.replace(new RegExp(':', 'g'), '.').replace('.[', '[');
     }
     _getAction(key = "") {
         return key.endsWith('logs') ? 'e' : 'r';

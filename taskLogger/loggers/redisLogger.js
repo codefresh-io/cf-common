@@ -118,7 +118,7 @@ class RedisLogger {
                 return this._wrapper(lastUpdateKey, this, []).set(date);
             },
             updateMetric: (path, size) => {
-                const metricLogsKey = `${root}:${accountId}:${progressId}:metrics:${path}`;
+                const metricLogsKey = `${root}:${accountId}:${progressId}:metrics:logs:${path}`;
                 return this._wrapper(metricLogsKey, this, []).set(size);
             },
             jobId: () => {
