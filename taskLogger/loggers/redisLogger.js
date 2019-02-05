@@ -66,7 +66,7 @@ class RedisLogger {
     start() {
         this.redisClient =
             redis.createClient({
-                host: this.config.url,
+                host: this.config.url || this.config.host,
                 password: this.config.password,
                 db: this.config.db || '1',
                 port: this.config.port || 6379

@@ -459,6 +459,10 @@ var TaskLogger = function (jobId, loggerImpl) {
         });
     }
 
+    const getLogger = function () {
+        return self.loggerImpl;
+    }
+
     return {
         restoreExistingSteps: restoreExistingSteps,
         create: create,
@@ -469,7 +473,8 @@ var TaskLogger = function (jobId, loggerImpl) {
         on: self.on.bind(self),
         steps: steps, // for testing purposes solely
         updateMemoryUsage: updateMemoryUsage,
-        setMemoryLimit: setMemoryLimit
+        setMemoryLimit: setMemoryLimit,
+        getLogger: getLogger
     };
 
 };
