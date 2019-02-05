@@ -10,7 +10,12 @@ class RedisPubDecorator {
             port: opts.redisConfig.port,
             scope: scope
 
-        })
+        });
+        this.keyToAction = opts.keyToMapper || {
+            'logs': 'e',
+            'memory': 'e',
+            'cpu': 'e'
+        }
 
 
     }
@@ -108,7 +113,15 @@ class RedisPubDecorator {
         return key.replace(new RegExp(':', 'g'), '.').replace('.[', '[');
     }
     _getAction(key = "") {
-        return key.endsWith('logs') ? 'e' : 'r';
+        const splittedKeys = key.split(":");
+        if (splittedKeys && splittedKeys.length > 0) {
+            const endsWith = splittedKeys[splittedKeys.length -1];
+            const actionFromMapper = this.keyToAction[endsWith];
+            if (actionFromMapper) {
+                return actionFromMapper;
+            }
+        }
+        return 'r';
     }
 
 

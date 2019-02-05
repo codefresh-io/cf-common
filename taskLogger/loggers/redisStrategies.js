@@ -13,7 +13,7 @@ class RedisFlattenStrategy {
         const keyInKeysSet =  [stack[0], lastKeyPart].some(this.keys.has.bind(this.keys));
         if (keyInKeysSet) {
             while (stack.length !== 0) {
-                key = `${key}:${stack.pop()}`;
+                key = `${key}:${stack.shift()}`;
             }
             const objToPush = {
                 slot: key.substr(this.baseKey.length + 1).replace(new RegExp(':', 'g'), '.'),
@@ -34,10 +34,10 @@ class RedisArrayStrategy {
     push(obj, key, redisClient, stack) {
         if (this.keys.has(stack[0])) {
             if (stack.length === 1 && typeof (obj) === 'string') {
-                redisClient.rpush(`${key}:${stack.pop()}`, obj);
+                redisClient.rpush(`${key}:${stack.shift()}`, obj);
             } else {
                 while (stack.length !== 0) {
-                    key = `${key}:${stack.pop()}`;
+                    key = `${key}:${stack.shift()}`;
                 }
                 redisClient.rpush(key, JSON.stringify(obj));
             }
@@ -53,12 +53,12 @@ class RedisSetStratry {
 
         if (typeof (obj) !== 'object' && stack.length !== 0) {
             obj = {
-                [stack.pop()]: obj
+                [stack.shift()]: obj
             };
         }
         if (typeof (obj) === 'object') {
             while (stack.length !== 0) {
-                key = `${key}:${stack.pop()}`;
+                key = `${key}:${stack.shift()}`;
             }
             const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
                 acc.push(key);

@@ -142,7 +142,7 @@ class RedisLogger {
                 const stackClone = stack.slice(0);
                 let fullKey = key;
                 while (stackClone.length !== 0) {
-                    fullKey = `${fullKey}:${stackClone.pop()}`;
+                    fullKey = `${fullKey}:${stackClone.shift()}`;
                 }
                 console.log(`going to push  ${JSON.stringify(obj)} to ${fullKey}`);
                 const receveidId = this.strategies.push(obj, key, thisArg.redisClient, stack);
@@ -188,7 +188,7 @@ class RedisLogger {
             },
             _updateKeyFromStack() {
                 while (stack.length !== 0) {
-                    key = `${key}:${stack.pop()}`;
+                    key = `${key}:${stack.shift()}`;
                 }
             }
             
