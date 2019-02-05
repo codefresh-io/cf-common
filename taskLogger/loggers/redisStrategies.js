@@ -53,7 +53,7 @@ class RedisSetStratry {
 
         if (typeof (obj) !== 'object' && stack.length !== 0) {
             obj = {
-                [stack.shift()]: obj
+                [stack.pop()]: obj
             };
         }
         if (typeof (obj) === 'object') {
