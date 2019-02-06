@@ -5,7 +5,7 @@ class RedisPubDecorator {
     constructor(opts, redisLogger) {
         this.redisLogger = redisLogger;
         this.nrp = new NRP({
-            host: opts.redisConfig.url,
+            host: opts.redisConfig.url || opts.redisConfig.host,
             auth: opts.redisConfig.password,
             port: opts.redisConfig.port,
             scope: scope
