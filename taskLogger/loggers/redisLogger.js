@@ -128,7 +128,7 @@ class RedisLogger {
     }
     attachStep(step) {
         assert(this.jobId, 'jobId must be set');
-        const key = `${root}:${this.accountId}:${this.jobId}:steps:[${step.name}]`;
+        const key = `${root}:${this.accountId}:${this.jobId}:steps:${step.name}`;
         return this._wrapper(key, this, []);
 
     }
