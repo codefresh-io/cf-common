@@ -45,7 +45,7 @@ const root = 'build-logs';
 class RedisLogger {
 
     constructor(opts) {
-        this.config = opts.redisConfig;
+        this.config = opts.redis;
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
         this.defaultLogKey = `${root}:${this.accountId}:${this.jobId}`;
@@ -128,7 +128,7 @@ class RedisLogger {
     }
     attachStep(step) {
         assert(this.jobId, 'jobId must be set');
-        const key = `${root}:${this.accountId}:${this.jobId}:steps:[${step.index}]`;
+        const key = `${root}:${this.accountId}:${this.jobId}:steps:[${step.name}]`;
         return this._wrapper(key, this, []);
 
     }

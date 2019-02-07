@@ -51,7 +51,6 @@ var TaskLogger = function (jobId, loggerImpl) {
     var steps    = {};
 
     var handlers = {};
-    var stepRefIndex = 0;
 
     const restoreExistingSteps = function () {
         
@@ -437,11 +436,7 @@ var TaskLogger = function (jobId, loggerImpl) {
     };
 
     const initStep = function(step, fullInit) {
-        if (!step.index){
-            //TODO: Potential BUG - support indexes on step refrences
-            step.index = stepRefIndex;
-            stepRefIndex++;
-        }
+        
         const writter = self.loggerImpl.attachStep(step);
         const name = step.name;
         if (fullInit) {
