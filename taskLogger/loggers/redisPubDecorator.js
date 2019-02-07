@@ -8,6 +8,7 @@ class RedisPubDecorator {
             host: opts.redis.url || opts.redis.host,
             auth: opts.redis.password,
             port: opts.redis.port,
+            db: opts.redis.db,
             scope: scope
 
         });
