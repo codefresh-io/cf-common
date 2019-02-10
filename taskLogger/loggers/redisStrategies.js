@@ -60,6 +60,9 @@ class RedisSetStratry {
             while (stack.length !== 0) {
                 key = `${key}:${stack.shift()}`;
             }
+            if (Object.keys(obj).length === 0) {
+                return MOVE_FORWARD;
+            }
             const hsetKeysValues = Object.keys(obj).reduce((acc, key) => {
                 acc.push(key);
                 acc.push(obj[key]);
