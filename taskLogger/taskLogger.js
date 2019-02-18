@@ -1,29 +1,16 @@
 'use strict';
 
-var _            = require('lodash');
-var CFError      = require('cf-errors');
-var ErrorTypes   = CFError.errorTypes;
-var EventEmitter = require('events');
-var util         = require('util');
-var rp           = require('request-promise');
-var Q            = require('q');
-const jwt        = require('jsonwebtoken');
+const _                                               = require('lodash');
+const CFError                                         = require('cf-errors');
+const ErrorTypes                                      = CFError.errorTypes;
+const EventEmitter                                    = require('events');
+const util                                            = require('util');
+const rp                                              = require('request-promise');
+const Q                                               = require('q');
+const jwt                                             = require('jsonwebtoken');
+const StepLogger                                      = require('./StepLogger');
+const { STATUS, STEPS_REFERENCES_KEY, LOGS_LOCATION } = require('./enums');
 
-var STATUS = {
-    PENDING: 'pending',
-    RUNNING: 'running',
-    SUCCESS: 'success',
-    ERROR: 'error',
-    SKIPPED: 'skipped',
-    PENDING_APPROVAL: 'pending-approval',
-    APPROVED: 'approved',
-    DENIED: 'denied',
-    TERMINATING: 'terminating',
-    TERMINATED: 'terminated'
-};
-
-const STEPS_REFERENCES_KEY = 'stepsReferences';
-const LOGS_LOCATION = 'logs';
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -50,12 +37,10 @@ var TaskLogger = function (jobId, loggerImpl) {
     var finished = false;
     var steps    = {};
 
-    var handlers = {};
-
     const restoreExistingSteps = function () {
-        
+
         return Q.resolve().then(() => {
-            
+
             //Note !! This is Redis specifc code
             return self.loggerImpl.child(STEPS_REFERENCES_KEY).getHash();
 
@@ -69,11 +54,11 @@ var TaskLogger = function (jobId, loggerImpl) {
                         ...(keyToStatus[current] === STATUS.PENDING_APPROVAL && {pendingApproval : true})
                     }
                     return acc;
-                    
+
                 },{});
             }
         }).thenResolve();
-        
+
         // let settled = false;
         // const deferred = Q.defer();
         // progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
@@ -122,7 +107,7 @@ var TaskLogger = function (jobId, loggerImpl) {
         //     }
         // }, 5000);
         // return deferred.promise;
-        
+
     };
 
     // var updateCurrentStepReferences = function () {
@@ -155,7 +140,7 @@ var TaskLogger = function (jobId, loggerImpl) {
             if (steps && steps.length > 0) {
                 steps[steps.length -1].child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
             }
-        })        
+        })
     };
 
     var create = function (name, eventReporting, resetStatus) {
@@ -186,21 +171,20 @@ var TaskLogger = function (jobId, loggerImpl) {
             };
         }
 
-        var step = steps[name];
-        if (!step) {
-            step = {
-                name: name,
-                status: STATUS.PENDING,
-                index: Object.keys(steps).length
-            };
+        let step = steps[name];
 
-            
-            initStep(step, true);
+        if (!step) {
+            const index = Object.keys(steps).length; //TODO why do we need this index?
+            step = new StepLogger(name, this.loggerImpl, index);
+            step.init();
+            steps[step.name] = step;
+
             if (eventReporting) {
-                var event = { action: "new-progress-step", name: name };
+                var event     = { action: "new-progress-step", name: name };
                 const headers = {};
                 try {
-                    jwt.decode(eventReporting.token) ? headers['x-access-token'] = eventReporting.token : headers.Authorization = eventReporting.token;
+                    jwt.decode(eventReporting.token) ? headers['x-access-token'] = eventReporting.token :
+                        headers.Authorization = eventReporting.token;
                 } catch (err) {
                     headers.Authorization = eventReporting.token;
                 }
@@ -214,189 +198,22 @@ var TaskLogger = function (jobId, loggerImpl) {
             }
 
         } else {
-            initStep(step);
+            step.init(); //TODO why do we have .init twice
             if (resetStatus) {
-                step.status = STATUS.PENDING;
-                step.writter.child('creationTimeStamp').set('');
-                step.writter.child('finishTimeStamp').set('');
-                step.writter.child('status').set(step.status);
+                step.reset();
             }
-    }
+        }
 
-        handlers[name] = {
-            start: function () {
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.PENDING) {
-                    step.status = STATUS.RUNNING;
-                    step.writter.child('status').set(step.status);
-                    step.writter.child('finishTimeStamp').set('');
-                    step.writter.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
-                }
-            },
-            resume: function () {
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.PENDING_APPROVAL) {
-                    step.status = STATUS.RUNNING;
-                    step.writter.child('status').set(step.status);
-                }
-            },
-            getReference: function () {
-                return step.writter.toString();
-            },
-            getLogsReference: function () {
-                return step.writter.child(LOGS_LOCATION).toString();
-            },
-            getLastUpdateReference: function () {
-                return self.loggerImpl.child('lastUpdate').toString();
-            },
-            getMetricsLogsReference: function () {
-                return step.writter.child('metrics').child(LOGS_LOCATION).toString();
-            },
-            write: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child(LOGS_LOCATION).push(message);
-                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            debug: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
-                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            warn: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child(LOGS_LOCATION).push(`\x1B[01;93m${message}\x1B[0m\r\n`);
-                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            info: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
-                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            finish: function (err, skip) {
-                if (step.status === STATUS.PENDING && !skip) { // do not close a pending step that should not be skipped
-                    return;
-                }
-
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL || step.status === STATUS.TERMINATING) {
-                    step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
-                    if (err) {
-                        step.status = (step.status === STATUS.TERMINATING ? STATUS.TERMINATED : (step.pendingApproval ? STATUS.DENIED : STATUS.ERROR));
-                    } else {
-                        step.status = step.pendingApproval ? STATUS.APPROVED : STATUS.SUCCESS;
-                    }
-                    if (skip) {
-                        step.status = STATUS.SKIPPED;
-                    }
-                    if (err && err.toString() !== 'Error') {
-                        step.writter.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
-                    }
-
-                    // step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                    step.writter.child('status').set(step.status);
-                    step.writter.child('finishTimeStamp').set(step.finishTimeStamp);
-                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
-                    delete handlers[name];
-                }
-                else {
-                    if (err) {
-                        self.emit("error",
-                            new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
-                    }
-                    else {
-                        self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
-                    }
-                }
-            },
-            getStatus: function() {
-                return step.status;
-            },
-            getName: function() {
-                return step.name;
-            },
-            markPreviouslyExecuted: function() {
-                if (fatal) {
-                    return;
-                }
-
-                step.writter.child('previouslyExecuted').set(true);
-            },
-            markPendingApproval: function() {
-                if (fatal) {
-                    return;
-                }
-
-                step.status = STATUS.PENDING_APPROVAL;
-                step.pendingApproval = true;
-                step.writter.child('status').set(step.status);
-                delete handlers[name];
-            },
-            updateMemoryUsage: function (time, memoryUsage) {
-                step.writter.child('metrics').child('memory').push({time, usage:memoryUsage});
-            },
-            updateCpuUsage: function (time, cpuUsage) {
-                step.writter.child('metrics').child('cpu').push({time, usage:cpuUsage});
-            },
-            markTerminating: function() {
-                if (step.status === STATUS.RUNNING) {
-                    step.status = STATUS.TERMINATING;
-                    step.writter.child('status').set(step.status);
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
-                }
-
-            }
-        };
-        return handlers[name];
+        return step;
     };
 
     var finish = function (err) { // jshint ignore:line
         if (fatal) {
             return;
         }
-        if (_.size(handlers)) {
-            _.forEach(handlers, (handler) => {
-                handler.finish(new Error('Unknown error occurred'));
+        if (_.size(steps)) {
+            _.forEach(steps, (step) => {
+                step.finish(new Error('Unknown error occurred'));
             });
         }
         finished = true;
@@ -410,9 +227,9 @@ var TaskLogger = function (jobId, loggerImpl) {
             return;
         }
 
-        if (_.size(handlers)) {
-            _.forEach(handlers, (handler) => {
-                handler.finish(new Error('Unknown error occurred'));
+        if (_.size(steps)) {
+            _.forEach(steps, (step) => {
+                step.finish(new Error('Unknown error occurred'));
             });
         }
         else {
@@ -434,25 +251,6 @@ var TaskLogger = function (jobId, loggerImpl) {
         const limit = limitMemory.replace('Mi','');
         self.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
     };
-
-    const initStep = function(step, fullInit) {
-        
-        const writter = self.loggerImpl.attachStep(step);
-        const name = step.name;
-        if (fullInit) {
-            writter.push(step);
-            steps[step.name] = step;
-            self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
-                [name] : step.status
-            });
-            self.emit("step-pushed", name);
-        } 
-        step.writter = writter;
-        //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
-        step.writter.child('status').watch((value) => {
-            self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
-        });
-    }
 
     const getLogger = function () {
         return self.loggerImpl;
