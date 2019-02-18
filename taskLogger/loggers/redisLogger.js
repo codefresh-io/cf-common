@@ -64,6 +64,7 @@ class RedisLogger {
     }
 
     start() {
+        if (this.started) { return;}
         this.redisClient =
             redis.createClient({
                 host: this.config.url || this.config.host,
@@ -71,6 +72,7 @@ class RedisLogger {
                 db: this.config.db || '1',
                 port: this.config.port || 6379
             });
+            this.cleanConnectionOnexit();
 
         this.redisClient.on('ready', () => {
             logger.info('Redis client ready');
@@ -84,7 +86,7 @@ class RedisLogger {
             });
             logger.error(error.message);
         });
-
+        this.started = true;
 
     }
     validate() {
@@ -198,6 +200,12 @@ class RedisLogger {
     child(name) {
         assert(this.defaultLogKey, 'no default log key');
         return this._wrapper(`${this.defaultLogKey}`, this, [name]);
+    }
+
+    cleanConnectionOnexit() {
+        process.on('exit', () => {
+            this.redisClient.quit();
+        })
     }
 
 
