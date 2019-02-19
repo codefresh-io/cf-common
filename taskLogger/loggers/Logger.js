@@ -1,5 +1,5 @@
 class Logger {
-    validate() {
+    async validate() {
         throw new Error('not implemented');
     }
 
