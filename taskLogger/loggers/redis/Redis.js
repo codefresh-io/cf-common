@@ -8,6 +8,7 @@ const {
     RedisSetStratry,
     ChainRedisStrategy
 } = require("./redisStrategies");
+const Logger = require('../Logger');
 
 const ContainerLabels = {
     VISIBILITY: 'io.codefresh.visibility',
@@ -42,9 +43,10 @@ const ContainerLabels = {
 
 const root = 'build-logs';
 
-class RedisLogger {
+class Redis extends Logger {
 
     constructor(opts) {
+        super();
         this.config = opts.redis;
         this.jobId = opts.jobId;
         this.accountId = opts.accountId;
@@ -60,7 +62,7 @@ class RedisLogger {
                 new RedisSetStratry()
             ]);
         }
-        
+
     }
 
     start() {
@@ -148,7 +150,7 @@ class RedisLogger {
                 }
                 console.log(`going to push  ${JSON.stringify(obj)} to ${fullKey}`);
                 const receveidId = this.strategies.push(obj, key, thisArg.redisClient, stack);
-                
+
                 //Watch support:
                 if (this.watachedKeys.has(fullKey)) {
                     this.watachedKeys.get(fullKey).call(this, obj);
@@ -186,14 +188,14 @@ class RedisLogger {
                             resolve(keys);
                         }
                     });
-                }); 
+                });
             },
             _updateKeyFromStack() {
                 while (stack.length !== 0) {
                     key = `${key}:${stack.shift()}`;
                 }
             }
-            
+
         }
         return wrapper;
     }
@@ -210,4 +212,4 @@ class RedisLogger {
 
 
 }
-module.exports = RedisLogger;
+module.exports = Redis;

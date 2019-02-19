@@ -14,8 +14,14 @@ const STATUS = {
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 const LOGS_LOCATION = 'logs';
 
+const TYPES = {
+    FIREBASE: 'firebase',
+    REDIS: 'redis',
+};
+
 module.exports = {
     STATUS,
+    TYPES,
     STEPS_REFERENCES_KEY,
     LOGS_LOCATION
 };

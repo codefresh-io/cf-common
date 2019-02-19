@@ -1,5 +1,5 @@
 module.exports = {
-  analysisUtils : require('./analysisUtils/analysis-utils'),
-  TaskLogger: require('./taskLogger/TaskLogger'),
-  LoggerFactory: require('./taskLogger/loggers/loggerFactory'),
+    analysisUtils: require('./analysisUtils/analysis-utils'),
+    createTaskLogger: require('./taskLogger/taskLogger').factory,
+    createStepLogger: require('./taskLogger/StepLogger').factory
 };

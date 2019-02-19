@@ -1,8 +1,9 @@
 'use strict';
 
-const _                                                 = require('lodash');
-const CFError                                           = require('cf-errors');
-const ErrorTypes                                        = CFError.errorTypes;
+const _                                               = require('lodash');
+const EventEmitter                                    = require('events');
+const CFError                                         = require('cf-errors');
+const ErrorTypes                                      = CFError.errorTypes;
 const { STATUS, STEPS_REFERENCES_KEY, LOGS_LOCATION } = require('./enums');
 
 class StepLogger extends EventEmitter {
@@ -11,6 +12,10 @@ class StepLogger extends EventEmitter {
         this.name = name;
         this.index = index;
         this.loggerImpl = loggerImpl;
+    }
+
+    static factory() {
+
     }
 
     init(fullInit) {
@@ -27,10 +32,6 @@ class StepLogger extends EventEmitter {
             this.emit("step-pushed", this.name);
         }
         this.writter = writter;
-        //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
-        this.writter.child('status').watch((value) => {
-            this.loggerImpl.child(STEPS_REFERENCES_KEY).child(this.name).set(value);
-        });
     }
 
     start() {

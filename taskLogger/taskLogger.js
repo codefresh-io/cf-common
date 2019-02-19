@@ -1,53 +1,66 @@
 'use strict';
 
-const _                                               = require('lodash');
-const CFError                                         = require('cf-errors');
-const ErrorTypes                                      = CFError.errorTypes;
-const EventEmitter                                    = require('events');
-const util                                            = require('util');
-const rp                                              = require('request-promise');
-const Q                                               = require('q');
-const jwt                                             = require('jsonwebtoken');
-const StepLogger                                      = require('./StepLogger');
-const { STATUS, STEPS_REFERENCES_KEY, LOGS_LOCATION } = require('./enums');
+const _                                                      = require('lodash');
+const CFError                                                = require('cf-errors');
+const ErrorTypes                                             = CFError.errorTypes;
+const EventEmitter                                           = require('events');
+const rp                                                     = require('request-promise');
+const Q                                                      = require('q');
+const jwt                                                    = require('jsonwebtoken');
+const StepLogger                                             = require('./StepLogger');
+const { Firebase, Redis, RedisPubDecorator }                 = require('./loggers');
+const { STATUS, TYPES, STEPS_REFERENCES_KEY, LOGS_LOCATION } = require('./enums');
+
+class TaskLogger extends EventEmitter {
+    constructor(jobId, loggerImpl) {
+        super();
+
+        if (!jobId) {
+            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+        }
+        else if (!loggerImpl) {
+            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because loggerImpl must be provided");
+        }
+        this.loggerImpl = loggerImpl;
+        this.loggerImpl.start(jobId);
 
 
-/**
- * TaskLogger - logging for build/launch/promote jobs
- * @param jobid - progress job id
- * @param firstStepCreationTime - optional. if provided the first step creationTime will be this value
- * @param loggerImpl - logging implemeations (e.g. : firebase , redis)
- * @returns {{create: create, finish: finish}}
- */
-var TaskLogger = function (jobId, loggerImpl) {
-    var self = this;
-    EventEmitter.call(self);
+        this.fatal    = false;
+        this.finished = false;
+        this.steps    = {};
+        this.logger = logger;
 
-    if (!jobId) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+        this.on('step-pushed', this.updateCurrentStepReferences.bind(this));
     }
-    else if (!loggerImpl) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because loggerImpl must be provided");
+
+    static async factory(opts) {
+        let logger;
+        switch (opts.type) {
+            case TYPES.FIREBASE:
+                logger = new Firebase(opts);
+            case TYPES.REDIS:
+                logger = new RedisPubDecorator(opts, new Redis(opts)); //TODO: move to functional "withPubDecorator"
+            default:
+                throw new Error(`${opts.key} is not implemented`);
+        }
+
+        await logger.validate();
+        await logger.start();
     }
-    this.loggerImpl = loggerImpl;
-    this.loggerImpl.start(jobId);
 
+    restoreExistingSteps() {
+        return Q.resovle();
 
-    var fatal    = false;
-    var finished = false;
-    var steps    = {};
-
-    const restoreExistingSteps = function () {
 
         return Q.resolve().then(() => {
 
             //Note !! This is Redis specifc code
-            return self.loggerImpl.child(STEPS_REFERENCES_KEY).getHash();
+            return this.loggerImpl.child(STEPS_REFERENCES_KEY).getHash();
 
         }).then((keyToStatus) => {
             if (keyToStatus) {
                 const stepFromRedis = Object.keys(keyToStatus);
-                steps = stepFromRedis.reduce((acc, current) => {
+                this.steps = stepFromRedis.reduce((acc, current) => {
                     acc[current] = {
                         status: keyToStatus[current],
                         name: current,
@@ -108,17 +121,18 @@ var TaskLogger = function (jobId, loggerImpl) {
         // }, 5000);
         // return deferred.promise;
 
-    };
+    }
 
-    // var updateCurrentStepReferences = function () {
-    //     const stepsReferences = {};
-    //     _.forEach(steps, (step) => {
-    //         stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
-    //     });
-    //     progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
-    // };
+    // TODO this has some problems
+    updateCurrentStepReferences(name) {
+        //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
+        this.loggerImpl.child('status').watch((value) => {
+            this.loggerImpl.child(STEPS_REFERENCES_KEY).child(name).set(value);
+        });
+    }
 
-    var addErrorMessageToEndOfSteps = function (message) {
+    addErrorMessageToEndOfSteps(message) {
+        return Q.resovle();
         // var deferred = Q.defer();
 
         // var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
@@ -136,16 +150,16 @@ var TaskLogger = function (jobId, loggerImpl) {
 
         // return deferred.promise;
         return Q.resolve().then(() => {
-            const steps = self.loggerImpl.child('steps').children();
+            const steps = this.loggerImpl.child('steps').children();
             if (steps && steps.length > 0) {
                 steps[steps.length -1].child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
             }
         })
-    };
+    }
 
-    var create = function (name, eventReporting, resetStatus) {
+    create(name, eventReporting, resetStatus) {
 
-        if (fatal || finished) {
+        if (this.fatal || this.finished) {
             return {
                 getReference: function () {
                 },
@@ -171,13 +185,13 @@ var TaskLogger = function (jobId, loggerImpl) {
             };
         }
 
-        let step = steps[name];
+        let step = this.steps[name];
 
         if (!step) {
-            const index = Object.keys(steps).length; //TODO why do we need this index?
+            const index = Object.keys(this.steps).length; //TODO why do we need this index?
             step = new StepLogger(name, this.loggerImpl, index);
             step.init();
-            steps[step.name] = step;
+            this.steps[step.name] = step;
 
             if (eventReporting) {
                 var event     = { action: "new-progress-step", name: name };
@@ -205,30 +219,30 @@ var TaskLogger = function (jobId, loggerImpl) {
         }
 
         return step;
-    };
+    }
 
-    var finish = function (err) { // jshint ignore:line
-        if (fatal) {
+    finish(err) { // jshint ignore:line
+        if (this.fatal) {
             return;
         }
-        if (_.size(steps)) {
-            _.forEach(steps, (step) => {
+        if (_.size(this.steps)) {
+            _.forEach(this.steps, (step) => {
                 step.finish(new Error('Unknown error occurred'));
             });
         }
-        finished = true;
-    };
+        this.finished = true;
+    }
 
-    var fatalError = function (err) {
+    fatalError(err) {
         if (!err) {
             throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
         }
-        if (fatal) {
+        if (this.fatal) {
             return;
         }
 
-        if (_.size(steps)) {
-            _.forEach(steps, (step) => {
+        if (_.size(this.steps)) {
+            _.forEach(this.steps, (step) => {
                 step.finish(new Error('Unknown error occurred'));
             });
         }
@@ -236,42 +250,25 @@ var TaskLogger = function (jobId, loggerImpl) {
             var errorStep = this.create("Something went wrong");
             errorStep.finish(err);
         }
-        fatal = true;
-    };
-
-    var getMetricsLogsReference = function () {
-        return self.loggerImpl.child('metrics').child(LOGS_LOCATION).toString();
-    };
-
-    const updateMemoryUsage = function (time, memoryUsage) {
-        self.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
-    };
-
-    const setMemoryLimit = function (limitMemory) {
-        const limit = limitMemory.replace('Mi','');
-        self.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
-    };
-
-    const getLogger = function () {
-        return self.loggerImpl;
+        this.fatal = true;
     }
 
-    return {
-        restoreExistingSteps: restoreExistingSteps,
-        create: create,
-        finish: finish,
-        fatalError: fatalError,
-        addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
-        getMetricsLogsReference: getMetricsLogsReference,
-        on: self.on.bind(self),
-        steps: steps, // for testing purposes solely
-        updateMemoryUsage: updateMemoryUsage,
-        setMemoryLimit: setMemoryLimit,
-        getLogger: getLogger
-    };
+    getMetricsLogsReference() {
+        return this.loggerImpl.child('metrics').child(LOGS_LOCATION).toString();
+    }
 
-};
+    updateMemoryUsage(time, memoryUsage) {
+        this.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
+    }
 
-util.inherits(TaskLogger, EventEmitter);
+    setMemoryLimit(limitMemory) {
+        const limit = limitMemory.replace('Mi','');
+        this.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
+    }
+
+    getLogger() {
+        return this.loggerImpl;
+    }
+}
 
 module.exports = TaskLogger;

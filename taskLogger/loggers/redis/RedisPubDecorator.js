@@ -1,8 +1,10 @@
 const NRP = require('node-redis-pubsub');
 const scope = "codefresh";
+const Logger = require('../Logger');
 
-class RedisPubDecorator {
+class RedisPubDecorator extends Logger {
     constructor(opts, redisLogger) {
+        super();
         this.redisLogger = redisLogger;
         this.nrp = new NRP({
             host: opts.redis.url || opts.redis.host,
@@ -99,7 +101,7 @@ class RedisPubDecorator {
 
     }
     _emit(key, obj) {
-    
+
             this.nrp.emit(this.jobId, JSON.stringify({
                 slot: this._reFormatKey(key.key),
                 payload:  obj,
@@ -107,7 +109,7 @@ class RedisPubDecorator {
                 ...(key.id > 0 && {id : key.id})
             }));
 
-        
+
     }
 
     _reFormatKey(key) {
