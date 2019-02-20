@@ -88,6 +88,9 @@ class RedisPubDecorator {
             },
             getHash: () => {
                 return toBeWrappedObject.getHash();
+            },
+            children: () => {
+                return toBeWrappedObject.children();
             }
 
         }

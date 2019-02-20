@@ -188,6 +188,10 @@ class RedisLogger {
                     });
                 }); 
             },
+            children: () => {
+                //TODO:Implement with scan/keys
+                return [];
+            },
             _updateKeyFromStack() {
                 while (stack.length !== 0) {
                     key = `${key}:${stack.shift()}`;
