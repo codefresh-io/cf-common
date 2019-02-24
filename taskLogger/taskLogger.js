@@ -1,28 +1,12 @@
 'use strict';
 
-var _            = require('lodash');
-var CFError      = require('cf-errors');
-var ErrorTypes   = CFError.errorTypes;
-var EventEmitter = require('events');
-var util         = require('util');
-var rp           = require('request-promise');
-var Q            = require('q');
-const jwt        = require('jsonwebtoken');
-
-var STATUS = {
-    PENDING: 'pending',
-    RUNNING: 'running',
-    SUCCESS: 'success',
-    ERROR: 'error',
-    SKIPPED: 'skipped',
-    PENDING_APPROVAL: 'pending-approval',
-    APPROVED: 'approved',
-    DENIED: 'denied',
-    TERMINATING: 'terminating',
-    TERMINATED: 'terminated'
-};
-
-const STEPS_REFERENCES_KEY = 'stepsReferences';
+const _            = require('lodash');
+const CFError      = require('cf-errors');
+const ErrorTypes   = CFError.errorTypes;
+const EventEmitter = require('events');
+const rp           = require('request-promise');
+const jwt          = require('jsonwebtoken');
+const { STATUS, VISIBILITY } = require('./enums');
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -32,121 +16,29 @@ const STEPS_REFERENCES_KEY = 'stepsReferences';
  * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
-    var self = this;
-    EventEmitter.call(self);
+class TaskLogger extends EventEmitter {
+    constructor({accountId, jobId}) {
+        super();
 
-    if (!jobId) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+        if (!accountId) {
+            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because accountId must be provided");
+        }
+        this.accountId = accountId;
+
+        if (!jobId) {
+            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+        }
+        this.jobId = jobId;
+
+        this.fatal    = false;
+        this.finished = false;
+        this.steps    = {};
     }
-    else if (!baseFirebaseUrl) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
-    }
-    else if (!FirebaseLib) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
-    }
 
+    async create(name, eventReporting, resetStatus) {
 
-    var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
-
-    var fatal    = false;
-    var finished = false;
-    var steps    = {};
-    var handlers = {};
-
-    const restoreExistingSteps = function () {
-        let settled = false;
-        const deferred = Q.defer();
-        progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
-            const stepsReferences = snapshot.val();
-            if (!stepsReferences) {
-                deferred.resolve();
-            }
-
-            Q.all(_.map(stepsReferences, (name, key) => {
-                const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
-                const step = {
-                    logs: {},
-                    firebaseRef: stepRef
-                };
-
-                const nameDeferred = Q.defer();
-                const statusDeferred = Q.defer();
-
-                stepRef.child('name').once('value', (snapshot) => {
-                    step.name = snapshot.val();
-                    nameDeferred.resolve();
-                });
-                stepRef.child('status').once('value', (snapshot) => {
-                    step.status = snapshot.val();
-                    if (step.status === STATUS.PENDING_APPROVAL) {
-                        step.pendingApproval = true;
-                    }
-                    statusDeferred.resolve();
-                });
-
-                return Q.all([nameDeferred.promise, statusDeferred.promise])
-                    .then(() => {
-                        steps[step.name] = step;
-                    });
-            }))
-                .then(() => {
-                    settled = true;
-                    deferred.resolve();
-                })
-                .done();
-        });
-
-        setTimeout(() => {
-            if (!settled) {
-                deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
-            }
-        }, 5000);
-        return deferred.promise;
-    };
-
-    var updateCurrentStepReferences = function () {
-        const stepsReferences = {};
-        _.forEach(steps, (step) => {
-            stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
-        });
-        progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
-    };
-
-    var addErrorMessageToEndOfSteps = function (message) {
-        var deferred = Q.defer();
-
-        var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
-        stepsRef.limitToLast(1).once('value', function (snapshot) {
-            try {
-                _.forEach(snapshot.val(), function(step, stepKey) {
-                    var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
-                    stepRef.child('logs').push(`\x1B[31m${message}\x1B[0m\r\n`);
-                });
-                deferred.resolve();
-            } catch (err) {
-                deferred.reject(err);
-            }
-        });
-
-        return deferred.promise;
-    };
-
-    var create = function (name, eventReporting, resetStatus) {
-
-        if (fatal || finished) {
+        if (this.fatal || this.finished) {
             return {
-                getReference: function () {
-                },
-                getLogsReference: function () {
-
-                },
-                getLastUpdateReference: function () {
-
-                },
-                getMetricsLogsReference: function () {
-
-                },
                 write: function () {
                 },
                 debug: function () {
@@ -160,26 +52,12 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             };
         }
 
-        var step = steps[name];
+        var step = this.steps[name];
         if (!step) {
-            step = {
-                name: name,
-                status: STATUS.PENDING,
-                logs: {}
-            };
 
-            steps[name]      = step;
-            var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
-            step.firebaseRef = stepsRef.push(step);
+            step = await this.createStep(name);
 
-            step.firebaseRef.on("value", function (snapshot) {
-                var val = snapshot.val();
-                if (val && val.name === name) {
-                    step.firebaseRef.off("value");
-                    self.emit("step-pushed", name);
-                    updateCurrentStepReferences();
-                }
-            });
+            this.steps[name]      = step;
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
@@ -199,225 +77,77 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             }
 
         } else if (resetStatus) {
-            step.status = STATUS.PENDING;
-            step.firebaseRef.child('creationTimeStamp').set('');
-            step.firebaseRef.child('finishTimeStamp').set('');
-            step.firebaseRef.child('status').set(step.status);
+            step.setStatus(STATUS.PENDING);
+            step.setFinishTimestamp('');
+            step.setCreationTimestamp('');
         }
 
-        handlers[name] = {
-            start: function () {
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.PENDING) {
-                    step.status = STATUS.RUNNING;
-                    step.firebaseRef.child('status').set(step.status);
-                    step.firebaseRef.child('finishTimeStamp').set('');
-                    step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
-                }
-            },
-            getReference: function () {
-                return step.firebaseRef.toString();
-            },
-            getLogsReference: function () {
-                return step.firebaseRef.child('logs').toString();
-            },
-            getLastUpdateReference: function () {
-                return progressRef.child('lastUpdate').toString();
-            },
-            getMetricsLogsReference: function () {
-                return step.firebaseRef.child('metrics').child('logs').toString();
-            },
-            write: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            debug: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            warn: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            info: function (message) {
-                if (fatal) {
-                    return;
-                }
-                if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
-                }
-            },
-            finish: function (err, skip) {
-                if (step.status === STATUS.PENDING && !skip) { // do not close a pending step that should not be skipped
-                    return;
-                }
-
-                if (fatal) {
-                    return;
-                }
-                if (step.status === STATUS.RUNNING || step.status === STATUS.PENDING || step.status === STATUS.PENDING_APPROVAL || step.status === STATUS.TERMINATING) {
-                    step.finishTimeStamp = +(new Date().getTime() / 1000).toFixed();
-                    if (err) {
-                        step.status = (step.status === STATUS.TERMINATING ? STATUS.TERMINATED : (step.pendingApproval ? STATUS.DENIED : STATUS.ERROR));
-                    } else {
-                        step.status = step.pendingApproval ? STATUS.APPROVED : STATUS.SUCCESS;
-                    }
-                    if (skip) {
-                        step.status = STATUS.SKIPPED;
-                    }
-                    if (err && err.toString() !== 'Error') {
-                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
-                    }
-
-                    step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                    progressRef.child("lastUpdate").set(new Date().getTime());
-                    delete handlers[name];
-                }
-                else {
-                    if (err) {
-                        self.emit("error",
-                            new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
-                    }
-                    else {
-                        self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
-                    }
-                }
-            },
-            getStatus: function() {
-                return step.status;
-            },
-            markPreviouslyExecuted: function() {
-                if (fatal) {
-                    return;
-                }
-
-                step.firebaseRef.child('previouslyExecuted').set(true);
-            },
-            markPendingApproval: function() {
-                if (fatal) {
-                    return;
-                }
-
-                step.status = STATUS.PENDING_APPROVAL;
-                step.pendingApproval = true;
-                step.firebaseRef.child('status').set(step.status);
-                delete handlers[name];
-            },
-            updateMemoryUsage: function (time, memoryUsage) {
-                step.firebaseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
-            },
-            updateCpuUsage: function (time, cpuUsage) {
-                step.firebaseRef.child('metrics').child('cpu').push({time, usage:cpuUsage});
-            },
-            markTerminating: function() {
-                if (step.status === STATUS.RUNNING) {
-                    step.status = STATUS.TERMINATING;
-                    step.firebaseRef.child('status').set(step.status);
-                }
-                else {
-                    self.emit("error",
-                        new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
-                }
-
-            }
-        };
-        return handlers[name];
+        return step;
     };
 
-    var finish = function (err) { // jshint ignore:line
-        if (fatal) {
+    async finish() { // jshint ignore:line
+        if (this.fatal) {
             return;
         }
-        if (_.size(handlers)) {
-            _.forEach(handlers, (handler) => {
-                handler.finish(new Error('Unknown error occurred'));
+        if (_.size(this.steps)) {
+            _.forEach(this.steps, async (step) => {
+                await step.finish(new Error('Unknown error occurred'));
             });
         }
-        finished = true;
-    };
+        this.finished = true;
+    }
 
-    var fatalError = function (err) {
+    async fatalError(err) {
         if (!err) {
             throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
         }
-        if (fatal) {
+        if (this.fatal) {
             return;
         }
 
-        if (_.size(handlers)) {
-            _.forEach(handlers, (handler) => {
-                handler.finish(new Error('Unknown error occurred'));
+        if (_.size(this.steps)) {
+            _.forEach(this.steps, async (step) => {
+                await step.finish(new Error('Unknown error occurred'));
             });
         }
         else {
-            var errorStep = this.create("Something went wrong");
-            errorStep.finish(err);
+            const errorStep = await this.create("Something went wrong");
+            await errorStep.finish(err);
         }
-        fatal = true;
-    };
 
-    var getMetricsLogsReference = function () {
-        return progressRef.child('metrics').child('logs').toString();
-    };
+        _.forEach(this.steps, (step) => {
+            step.fatal = true;
+        });
+        this.fatal = true;
+    }
 
-    const updateMemoryUsage = function (time, memoryUsage) {
-        progressRef.child('metrics').child('memory').push({time, usage:memoryUsage});
-    };
+    async updateMemoryUsage(time, memoryUsage) {
+        return this._reportMemoryUsage(time, memoryUsage);
+    }
 
-    const setMemoryLimit = function (limitMemory) {
-        const limit = limitMemory.replace('Mi','');
-        progressRef.child('metrics').child('limits').child('memory').push(limit);
-    };
+    async setMemoryLimit(memoryLimit) {
+        this.memoryLimit = memoryLimit.replace('Mi', '');
+        return this._reportMemoryLimit();
+    }
 
-    return {
-        restoreExistingSteps: restoreExistingSteps,
-        create: create,
-        finish: finish,
-        fatalError: fatalError,
-        addErrorMessageToEndOfSteps: addErrorMessageToEndOfSteps,
-        getMetricsLogsReference: getMetricsLogsReference,
-        on: self.on.bind(self),
-        steps: steps, // for testing purposes solely
-        updateMemoryUsage: updateMemoryUsage,
-        setMemoryLimit: setMemoryLimit
-    };
+    async setVisibility(visibility) {
+        if (![VISIBILITY.PRIVATE, VISIBILITY.PUBLIC].includes(visibility)) {
+            throw new Error(`Visibility: ${visibility} is not supported. use public/private`);
+        }
 
-};
+        this.visibility = visibility;
+        return this._reportVisibility();
+    }
 
-util.inherits(TaskLogger, EventEmitter);
+    async setData(data) {
+        this.data = data;
+        return this._reportData();
+    }
+
+    async setStatus(status) {
+        this.status = status;
+        return this._reportStatus();
+    }
+}
 
 module.exports = TaskLogger;

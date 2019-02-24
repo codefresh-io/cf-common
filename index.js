@@ -1,4 +1,6 @@
 module.exports = {
   analysisUtils : require('./analysisUtils/analysis-utils'),
-  TaskLogger: require('./taskLogger/taskLogger')
+  TaskLogger: require('./taskLogger/taskLoggerFactory'),
+  StepLogger: require('./taskLogger/stepLoggerFactory'),
+  TYPES: require('./taskLogger/enums').TYPES,
 };
