@@ -21,6 +21,27 @@ const main = async () => {
     const stepLogger = taskLogger.create('stepName', undefined, undefined, true);
     stepLogger.start();
     stepLogger.write('hey');
+    stepLogger.reportName();
+    stepLogger.clearLogs();
+    stepLogger.setStatus('pending');
+    stepLogger.start();
+    stepLogger.write('write');
+    stepLogger.debug('debug');
+    stepLogger.warn('warn');
+    stepLogger.info('info');
+
+    stepLogger.markPreviouslyExecuted();
+    stepLogger.markPendingApproval();
+
+    stepLogger.updateMemoryUsage(new Date().getTime(), 'mem');
+    stepLogger.updateCpuUsage(new Date().getTime(), 'cpu');
+
+    //stepLogger.markTerminating();
+
+    //stepLogger.finish(new Error('err'));
+    //stepLogger.finish();
+
+    //stepLogger.delete();
 
     const restoredTaskLogger = await TaskLogger({
         accountId: 'accountId',
@@ -37,7 +58,7 @@ const main = async () => {
     restoredTaskLogger.addErrorMessageToEndOfSteps('my error!');
 
     taskLogger.setStatus('success');
-    taskLogger.clearSteps();
+    //taskLogger.clearSteps();
     //taskLogger.delete();
     //taskLogger.finish();
     //taskLogger.fatalError(new Error('my error'));
