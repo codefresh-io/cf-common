@@ -6,7 +6,11 @@ const ErrorTypes   = CFError.errorTypes;
 const EventEmitter = require('events');
 const rp           = require('request-promise');
 const jwt          = require('jsonwebtoken');
-const { STATUS, VISIBILITY } = require('./enums');
+const { STATUS, VISIBILITY, TYPES } = require('./enums');
+
+const stepClasses = {
+    [TYPES.FIREBASE]: require('./firebase/FirebaseStepLogger')
+};
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -36,7 +40,7 @@ class TaskLogger extends EventEmitter {
         this.steps    = {};
     }
 
-    async create(name, eventReporting, resetStatus) {
+    create(name, eventReporting, resetStatus, runCreationLogic) {
 
         if (this.fatal || this.finished) {
             return {
@@ -56,9 +60,23 @@ class TaskLogger extends EventEmitter {
         var step = this.steps[name];
         if (!step) {
 
-            step = await this.createStep(name);
+            step = new stepClasses[this.type]({
+                accountId: this.accountId,
+                jobId: this.jobId,
+                name
+            }, {
+                ...this.opts
+            });
 
             this.steps[name]      = step;
+
+
+            if (runCreationLogic) {
+                step.reportName();
+                step.clearLogs();
+                step.setStatus(STATUS.PENDING);
+                this.newStepAdded(step);
+            }
 
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
@@ -86,19 +104,19 @@ class TaskLogger extends EventEmitter {
         return step;
     };
 
-    async finish() { // jshint ignore:line
+    finish() { // jshint ignore:line
         if (this.fatal) {
             return;
         }
         if (_.size(this.steps)) {
-            _.forEach(this.steps, async (step) => {
-                await step.finish(new Error('Unknown error occurred'));
+            _.forEach(this.steps, (step) => {
+                step.finish(new Error('Unknown error occurred'));
             });
         }
         this.finished = true;
     }
 
-    async fatalError(err) {
+    fatalError(err) {
         if (!err) {
             throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
         }
@@ -107,13 +125,13 @@ class TaskLogger extends EventEmitter {
         }
 
         if (_.size(this.steps)) {
-            _.forEach(this.steps, async (step) => {
-                await step.finish(new Error('Unknown error occurred'));
+            _.forEach(this.steps, (step) => {
+                step.finish(new Error('Unknown error occurred'));
             });
         }
         else {
-            const errorStep = await this.create("Something went wrong");
-            await errorStep.finish(err);
+            const errorStep = this.create("Something went wrong");
+            errorStep.finish(err);
         }
 
         _.forEach(this.steps, (step) => {
@@ -122,32 +140,32 @@ class TaskLogger extends EventEmitter {
         this.fatal = true;
     }
 
-    async updateMemoryUsage(time, memoryUsage) {
-        return this._reportMemoryUsage(time, memoryUsage);
+    updateMemoryUsage(time, memoryUsage) {
+        this._reportMemoryUsage(time, memoryUsage);
     }
 
-    async setMemoryLimit(memoryLimit) {
+    setMemoryLimit(memoryLimit) {
         this.memoryLimit = memoryLimit.replace('Mi', '');
-        return this._reportMemoryLimit();
+        this._reportMemoryLimit();
     }
 
-    async setVisibility(visibility) {
+    setVisibility(visibility) {
         if (![VISIBILITY.PRIVATE, VISIBILITY.PUBLIC].includes(visibility)) {
             throw new Error(`Visibility: ${visibility} is not supported. use public/private`);
         }
 
         this.visibility = visibility;
-        return this._reportVisibility();
+        this._reportVisibility();
     }
 
-    async setData(data) {
+    setData(data) {
         this.data = data;
-        return this._reportData();
+        this._reportData();
     }
 
-    async setStatus(status) {
+    setStatus(status) {
         this.status = status;
-        return this._reportStatus();
+        this._reportStatus();
     }
 
     getConfiguration() {

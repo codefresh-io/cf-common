@@ -2,59 +2,29 @@
 
 const Q                  = require('q');
 const Firebase           = require('firebase');
-const debug              = require('debug')('codefresh:stepLogger');
 const CFError            = require('cf-errors');
 const ErrorTypes         = CFError.errorTypes;
-const { STATUS, TYPES }  = require('../enums');
+const { STATUS }         = require('../enums');
 const BaseStepLogger     = require('../StepLogger');
 
 class FirebaseStepLogger extends BaseStepLogger {
     constructor(step, opts) {
         super(step, opts);
-    }
 
-    static async factory(step, {baseFirebaseUrl, firebaseSecret}) {
-        const stepLogger = new FirebaseStepLogger(step, {baseFirebaseUrl, firebaseSecret});
+        const {baseFirebaseUrl} = opts;
 
         if (!baseFirebaseUrl) {
             throw new CFError(ErrorTypes.Error, "failed to create stepLogger because baseFirebaseUrl must be provided");
         }
-        stepLogger.baseFirebaseUrl = baseFirebaseUrl;
+        this.baseFirebaseUrl = baseFirebaseUrl;
 
-        if (!firebaseSecret) {
-            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because Firebase secret reference must be provided");
-        }
-        stepLogger.firebaseSecret = firebaseSecret;
+        this.baseUrl = `${this.baseFirebaseUrl}/${this.jobId}`;
 
-        stepLogger.baseUrl = `${stepLogger.baseFirebaseUrl}/${stepLogger.jobId}`;
-        stepLogger.baseRef = new Firebase(stepLogger.baseUrl);
+        this.lastUpdateUrl = `${this.baseUrl}/lastUpdate`;
+        this.lastUpdateRef = new Firebase(this.lastUpdateUrl);
 
-        stepLogger.lastUpdateUrl = `${stepLogger.baseUrl}/lastUpdate`;
-        stepLogger.lastUpdateRef = new Firebase(stepLogger.lastUpdateUrl);
-
-        stepLogger.stepUrl = `${stepLogger.baseUrl}/steps/${stepLogger.name}`;
-        stepLogger.stepRef = new Firebase(stepLogger.stepUrl);
-
-        try {
-            if (!FirebaseStepLogger.authenticated) {
-                await Q.ninvoke(stepLogger.baseRef, 'authWithCustomToken', firebaseSecret);
-                debug(`TaskLogger created and authenticated to firebase url: ${stepLogger.baseUrl}`);
-
-                // workaround to not authenticate each time
-                FirebaseStepLogger.authenticated = true;
-            } else {
-                debug('StepLogger created without authentication');
-            }
-
-        } catch (err) {
-            throw new CFError({
-                cause: err,
-                message: `Failed to create stepLogger becuase authentication to firebase url ${stepLogger.baseUrl}`
-            });
-        }
-        debug(`StepLogger created and authenticated to firebase url: ${stepLogger.baseUrl}`);
-
-        return stepLogger;
+        this.stepUrl = `${this.baseUrl}/steps/${this.name}`;
+        this.stepRef = new Firebase(this.stepUrl);
     }
 
     async restore() {
@@ -76,47 +46,47 @@ class FirebaseStepLogger extends BaseStepLogger {
         return Q.all([nameDeferred.promise, statusDeferred.promise]);
     }
 
-    async _reportLog(message) {
+    _reportLog(message) {
         this.stepRef.child("logs").push(message);
     }
 
-    async _reportLastUpdate() {
+    _reportLastUpdate() {
         this.lastUpdateRef.set(this.lastUpdate);
     }
 
-    async _reportPrevioulyExecuted() {
+    _reportPrevioulyExecuted() {
         this.stepRef.child('previouslyExecuted').set(this.previouslyExecuted);
     }
 
-    async _reportStatus() {
+    _reportStatus() {
         this.stepRef.child('status').set(this.status);
     }
 
-    async _reportFinishTimestamp() {
+    _reportFinishTimestamp() {
         this.stepRef.child('finishTimeStamp').set(this.finishTimeStamp);
     }
 
-    async _reportCreationTimestamp() {
+    _reportCreationTimestamp() {
         this.stepRef.child('creationTimeStamp').set(this.creationTimeStamp);
     }
 
-    async _reportMemoryUsage(time, memoryUsage) {
+    _reportMemoryUsage(time, memoryUsage) {
         this.stepRef.child('metrics').child('memory').push({ time, usage: memoryUsage });
     }
 
-    async _reportCpuUsage(time, cpuUsage) {
+    _reportCpuUsage(time, cpuUsage) {
         this.stepRef.child('metrics').child('cpu').push({ time, usage: cpuUsage });
     }
 
-    async reportName() {
+    reportName() {
         this.stepRef.child('name').set(this.name);
     }
 
-    async clearLogs() {
+    clearLogs() {
         this.stepRef.child('logs').set({});
     }
 
-    async delete() {
+    delete() {
         this.stepRef.remove();
     }
 
@@ -138,8 +108,5 @@ class FirebaseStepLogger extends BaseStepLogger {
     }
 
 }
-FirebaseStepLogger.TYPE = TYPES.FIREBASE;
-FirebaseStepLogger.authenticated = false;
-
 
 module.exports = FirebaseStepLogger;

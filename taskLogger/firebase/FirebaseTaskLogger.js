@@ -15,6 +15,7 @@ const STEPS_REFERENCES_KEY = 'stepsReferences';
 class FirebaseTaskLogger extends TaskLogger {
     constructor(task, opts) {
         super(task, opts);
+        this.type = TYPES.FIREBASE;
     }
 
     static async factory(task, {baseFirebaseUrl, firebaseSecret}) {
@@ -46,7 +47,6 @@ class FirebaseTaskLogger extends TaskLogger {
 
                 // workaround to not authenticate each time
                 FirebaseTaskLogger.authenticated = true;
-                FirebaseStepLogger.authenticated = true;
             } else {
                 debug('TaskLogger created without authentication');
             }
@@ -60,30 +60,15 @@ class FirebaseTaskLogger extends TaskLogger {
         return taskLogger;
     }
 
-    async createStep(name) {
-        const stepLogger = await FirebaseStepLogger.factory({
-            accountId: this.accountId,
-            jobId: this.jobId,
-            name
-        }, {
-            baseFirebaseUrl: this.baseFirebaseUrl,
-            firebaseSecret: this.firebaseSecret
-        });
-
-        stepLogger.stepRef.on("value", (snapshot) => {
+    newStepAdded(step) {
+        step.stepRef.on("value", (snapshot) => {
             var val = snapshot.val();
-            if (val && val.name === name) {
-                stepLogger.stepRef.off("value");
-                this.emit("step-pushed", name);
+            if (val && val.name === step.name) {
+                step.stepRef.off("value");
+                this.emit("step-pushed", step.name);
                 this._updateCurrentStepReferences();
             }
         });
-
-        await stepLogger.reportName();
-        await stepLogger.clearLogs();
-        await stepLogger.setStatus(STATUS.PENDING);
-
-        return stepLogger;
     }
 
     async restore() {
@@ -96,13 +81,12 @@ class FirebaseTaskLogger extends TaskLogger {
             }
 
             Q.all(_.map(stepsReferences, async (name, key) => {
-                const step = await FirebaseStepLogger.factory({
+                const step = new FirebaseStepLogger({
                     accountId: this.accountId,
                     jobId: this.jobId,
                     name: key
                 }, {
-                    baseFirebaseUrl: this.baseFirebaseUrl,
-                    firebaseSecret: this.firebaseSecret
+                    ...this.opts
                 });
 
                 step.logs = {};
@@ -127,7 +111,7 @@ class FirebaseTaskLogger extends TaskLogger {
 
     // TODO see what to do with this
     getMetricsLogsReference() {
-        return this.baseRef.child('metrics').child('logs').toString();
+        this.baseRef.child('metrics').child('logs').toString();
     }
 
     _updateCurrentStepReferences() {
@@ -156,31 +140,31 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 
-    async _reportMemoryUsage(time, memoryUsage) {
+    _reportMemoryUsage(time, memoryUsage) {
         this.baseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
     }
 
-    async _reportMemoryLimit() {
+    _reportMemoryLimit() {
         this.baseRef.child('metrics').child('limits').child('memory').push(this.memoryLimit);
     }
 
-    async _reportVisibility() {
+    _reportVisibility() {
         this.baseRef.child('visibility').set(this.visibility);
     }
 
-    async _reportData() {
+    _reportData() {
         this.baseRef.child('data').set(this.data);
     }
 
-    async _reportStatus() {
+    _reportStatus() {
         this.baseRef.child('status').set(this.status);
     }
 
-    async reportAccountId() {
+    reportAccountId() {
         this.baseRef.child('accountId').set(this.accountId);
     }
 
-    async reportId() {
+    reportId() {
         this.baseRef.child('id').set(this.jobId);
     }
 
@@ -200,12 +184,14 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 
-    async clearSteps() {
-        return this.stepsRef.remove();
+    // TODO consider moving to async
+    clearSteps() {
+        this.stepsRef.remove();
     }
 
-    async delete() {
-        return this.baseRef.remove();
+    // TODO consider moving to async
+    delete() {
+        this.baseRef.remove();
     }
 
     async getRaw() {

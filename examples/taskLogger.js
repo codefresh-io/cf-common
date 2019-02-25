@@ -1,5 +1,4 @@
-const {TaskLogger, TYPES } = require('../ndex');
-const Firebase = require('firebase');
+const {TaskLogger, TYPES } = require('../index');
 
 const main = async () => {
     const taskLogger = await TaskLogger({
@@ -7,7 +6,6 @@ const main = async () => {
         jobId: 'jobId'
     }, {
         type: TYPES.FIREBASE,
-        FirebaseLib: Firebase,
         baseFirebaseUrl: 'https://codefresh-dev.firebaseio.com/development-docker/build-logs',
         firebaseSecret: 'rmxPCB0YOyRdA0ohVUlkbGaQsSmXlARBIXbfnXoM'
     });
@@ -20,8 +18,8 @@ const main = async () => {
     taskLogger.updateMemoryUsage(new Date(), 'sd');
     taskLogger.setData({key: 'value'});
 
-    const stepLogger = await taskLogger.create('stepName');
-    await stepLogger.start();
+    const stepLogger = taskLogger.create('stepName', undefined, undefined, true);
+    stepLogger.start();
     stepLogger.write('hey');
 
     const restoredTaskLogger = await TaskLogger({
@@ -29,18 +27,20 @@ const main = async () => {
         jobId: 'jobId'
     }, {
         type: TYPES.FIREBASE,
-        FirebaseLib: Firebase,
         baseFirebaseUrl: 'https://codefresh-dev.firebaseio.com/development-docker/build-logs',
         firebaseSecret: 'rmxPCB0YOyRdA0ohVUlkbGaQsSmXlARBIXbfnXoM'
     });
     await restoredTaskLogger.restore();
-    const restoredStepLogger = await restoredTaskLogger.create('stepName');
+    const restoredStepLogger = restoredTaskLogger.create('stepName');
     restoredStepLogger.write('makore');
 
     restoredTaskLogger.addErrorMessageToEndOfSteps('my error!');
 
+    taskLogger.setStatus('success');
+    taskLogger.clearSteps();
+    //taskLogger.delete();
     //taskLogger.finish();
-    taskLogger.fatalError(new Error('my error'));
+    //taskLogger.fatalError(new Error('my error'));
 };
 
 main();

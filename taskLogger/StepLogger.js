@@ -6,7 +6,7 @@ const { STATUS } = require('./enums');
 class StepLogger extends EventEmitter {
     constructor({accountId, jobId, name}, opts) {
         super();
-        this.opts;
+        this.opts = opts;
 
         if (!accountId) {
             throw new CFError(ErrorTypes.Error, "failed to create stepLogger because accountId must be provided");
@@ -26,26 +26,25 @@ class StepLogger extends EventEmitter {
         this.fatal = false;
     }
 
-    async start() {
+    start() {
         if (this.fatal) {
             return;
         }
         if (this.status === STATUS.PENDING) {
             this.status = STATUS.RUNNING;
-            await this._reportStatus();
-
-            await this.setFinishTimestamp('');
-            await this.setCreationTimestamp(+(new Date().getTime() / 1000).toFixed());
+            this._reportStatus();
+            this.setFinishTimestamp('');
+            this.setCreationTimestamp(+(new Date().getTime() / 1000).toFixed());
         }
     }
 
-    async write(message) {
+    write(message) {
         if (this.fatal) {
             return;
         }
         if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(this.status)) {
-            await this._reportLog(message);
-            return this.updateLastUpdate();
+            this._reportLog(message);
+            this.updateLastUpdate();
         }
         else {
             this.emit("error",
@@ -55,13 +54,13 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async debug(message) {
+    debug(message) {
         if (this.fatal) {
             return;
         }
         if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(this.status)) {
-            await this._reportLog(message + '\r\n');
-            return this.updateLastUpdate();
+            this._reportLog(message + '\r\n');
+            this.updateLastUpdate();
         }
         else {
             this.emit("error",
@@ -71,13 +70,13 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async warn(message) {
+    warn(message) {
         if (this.fatal) {
             return;
         }
         if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(this.status)) {
-            await this._reportLog(`\x1B[01;93m${message}\x1B[0m\r\n`);
-            return this.updateLastUpdate();
+            this._reportLog(`\x1B[01;93m${message}\x1B[0m\r\n`);
+            this.updateLastUpdate();
         }
         else {
             this.emit("error",
@@ -87,13 +86,13 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async info(message) {
+    info(message) {
         if (this.fatal) {
             return;
         }
         if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(this.status)) {
-            await this._reportLog(message + '\r\n');
-            return this.updateLastUpdate();
+            this._reportLog(message + '\r\n');
+            this.updateLastUpdate();
         }
         else {
             this.emit("error",
@@ -103,7 +102,7 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async finish(err, skip) {
+    finish(err, skip) {
         if (this.status === STATUS.PENDING && !skip) { // do not close a pending step that should not be skipped
             return;
         }
@@ -124,11 +123,11 @@ class StepLogger extends EventEmitter {
                 this.status = STATUS.SKIPPED;
             }
             if (err && err.toString() !== 'Error') {
-                await this._reportLog(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
+                this._reportLog(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
             }
 
-            await this._reportStatus();
-            await this._reportFinishTimestamp();
+            this._reportStatus();
+            this._reportFinishTimestamp();
             return this.updateLastUpdate();
         }
         else {
@@ -146,17 +145,17 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async updateLastUpdate() {
+    updateLastUpdate() {
         this.lastUpdate = new Date().getTime();
-        return this._reportLastUpdate();
+        this._reportLastUpdate();
     }
 
-    async setFinishTimestamp(date) {
+    setFinishTimestamp(date) {
         this.finishTimeStamp = date;
         this._reportFinishTimestamp();
     }
 
-    async setCreationTimestamp(date) {
+    setCreationTimestamp(date) {
         this.creationTimeStamp = date;
         this._reportCreationTimestamp();
     }
@@ -165,36 +164,36 @@ class StepLogger extends EventEmitter {
         return this.status;
     }
 
-    async markPreviouslyExecuted() {
+    markPreviouslyExecuted() {
         if (this.fatal) {
             return;
         }
 
         this.previouslyExecuted = true;
-        return this._reportPrevioulyExecuted();
+        this._reportPrevioulyExecuted();
     }
 
-    async markPendingApproval() {
+    markPendingApproval() {
         if (this.fatal) {
             return;
         }
 
-        await this.setStatus(STATUS.PENDING_APPROVAL);
+        this.setStatus(STATUS.PENDING_APPROVAL);
         this.pendingApproval = true;
     }
 
-    async updateMemoryUsage(time, memoryUsage) {
-        return this._reportMemoryUsage(time, memoryUsage);
+    updateMemoryUsage(time, memoryUsage) {
+        this._reportMemoryUsage(time, memoryUsage);
     }
 
-    async updateCpuUsage(time, cpuUsage) {
-        return this._reportCpuUsage(time, cpuUsage);
+    updateCpuUsage(time, cpuUsage) {
+        this._reportCpuUsage(time, cpuUsage);
     }
 
-    async markTerminating() {
+    markTerminating() {
         if (this.status === STATUS.RUNNING) {
             this.status = STATUS.TERMINATING;
-            return this._reportStatus();
+            this._reportStatus();
         }
         else {
             this.emit("error",
@@ -203,9 +202,9 @@ class StepLogger extends EventEmitter {
         }
     }
 
-    async setStatus(status) {
+    setStatus(status) {
         this.status = status;
-        return this._reportStatus();
+        this._reportStatus();
     }
 
     getConfiguration() {
