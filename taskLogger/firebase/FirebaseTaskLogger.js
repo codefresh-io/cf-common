@@ -115,11 +115,6 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 
-    // TODO see what to do with this
-    getMetricsLogsReference() {
-        this.baseRef.child('metrics').child('logs').toString();
-    }
-
     _updateCurrentStepReferences() {
         const stepsReferences = {};
         _.forEach(this.steps, (step) => {
@@ -155,7 +150,7 @@ class FirebaseTaskLogger extends TaskLogger {
     }
 
     _reportLogSize(size) {
-        this.baseRef.child('metrics').child('log').child('total').set(size);
+        this.baseRef.child('metrics').child('logs').child('total').set(size);
     }
 
     _reportVisibility() {
