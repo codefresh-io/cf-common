@@ -128,7 +128,7 @@ class StepLogger extends EventEmitter {
 
             this._reportStatus();
             this._reportFinishTimestamp();
-            return this.updateLastUpdate();
+            this.updateLastUpdate();
             this.emit('finished');
         }
         else {
