@@ -184,14 +184,12 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 
-    // TODO consider moving to async
-    clearSteps() {
-        this.stepsRef.remove();
+    async clearSteps() {
+        return this.stepsRef.remove();
     }
 
-    // TODO consider moving to async
-    delete() {
-        this.baseRef.remove();
+    async delete() {
+        return this.baseRef.remove();
     }
 
     async getRaw() {

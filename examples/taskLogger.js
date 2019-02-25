@@ -41,7 +41,7 @@ const main = async () => {
     //stepLogger.finish(new Error('err'));
     //stepLogger.finish();
 
-    //stepLogger.delete();
+    //await stepLogger.delete();
 
     const restoredTaskLogger = await TaskLogger({
         accountId: 'accountId',
@@ -58,8 +58,8 @@ const main = async () => {
     restoredTaskLogger.addErrorMessageToEndOfSteps('my error!');
 
     taskLogger.setStatus('success');
-    //taskLogger.clearSteps();
-    //taskLogger.delete();
+    //await taskLogger.clearSteps();
+    //await taskLogger.delete();
     //taskLogger.finish();
     //taskLogger.fatalError(new Error('my error'));
 };

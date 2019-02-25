@@ -86,8 +86,8 @@ class FirebaseStepLogger extends BaseStepLogger {
         this.stepRef.child('logs').set({});
     }
 
-    delete() {
-        this.stepRef.remove();
+    async delete() {
+        return this.stepRef.remove();
     }
 
     // TODO see what to do with these
