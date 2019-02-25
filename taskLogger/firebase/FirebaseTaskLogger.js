@@ -91,6 +91,9 @@ class FirebaseTaskLogger extends TaskLogger {
                 step.on('error', (err) => {
                     this.emit('error', err);
                 });
+                step.on('finished', () => {
+                    delete this.steps[name];
+                });
 
                 step.logs = {};
 

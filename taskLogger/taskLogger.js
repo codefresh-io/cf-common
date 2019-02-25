@@ -72,7 +72,9 @@ class TaskLogger extends EventEmitter {
             });
 
             this.steps[name]      = step;
-
+            step.on('finished', () => {
+               delete this.steps[name];
+            });
 
             if (runCreationLogic) {
                 step.reportName();

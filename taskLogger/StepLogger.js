@@ -129,6 +129,7 @@ class StepLogger extends EventEmitter {
             this._reportStatus();
             this._reportFinishTimestamp();
             return this.updateLastUpdate();
+            this.emit('finished');
         }
         else {
             if (err) {
@@ -180,6 +181,7 @@ class StepLogger extends EventEmitter {
 
         this.setStatus(STATUS.PENDING_APPROVAL);
         this.pendingApproval = true;
+        this.emit('finished');
     }
 
     updateMemoryUsage(time, memoryUsage) {
