@@ -8,7 +8,7 @@ const CFError                          = require('cf-errors');
 const ErrorTypes                       = CFError.errorTypes;
 const TaskLogger                       = require('../taskLogger');
 const FirebaseStepLogger               = require('./FirebaseStepLogger');
-const { TYPES, STATUS }                = require('../enums');
+const { TYPES }                        = require('../enums');
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 
