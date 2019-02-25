@@ -67,6 +67,9 @@ class TaskLogger extends EventEmitter {
             }, {
                 ...this.opts
             });
+            step.on('error', (err) => {
+               this.emit('error', err);
+            });
 
             this.steps[name]      = step;
 
@@ -149,6 +152,10 @@ class TaskLogger extends EventEmitter {
         this._reportMemoryLimit();
     }
 
+    setLogSize(size) {
+        this._reportLogSize(size);
+    }
+
     setVisibility(visibility) {
         if (![VISIBILITY.PRIVATE, VISIBILITY.PUBLIC].includes(visibility)) {
             throw new Error(`Visibility: ${visibility} is not supported. use public/private`);
@@ -170,7 +177,7 @@ class TaskLogger extends EventEmitter {
 
     getConfiguration() {
         return {
-            step: {
+            task: {
                 accountId: this.accountId,
                 jobId: this.jobId,
             },

@@ -10,6 +10,9 @@ const main = async () => {
         firebaseSecret: 'rmxPCB0YOyRdA0ohVUlkbGaQsSmXlARBIXbfnXoM'
     });
 
+    console.log(JSON.stringify(taskLogger.getConfiguration()));
+    return;
+
     taskLogger.reportId();
     taskLogger.reportAccountId();
     taskLogger.setVisibility('public');

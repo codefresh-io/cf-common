@@ -18,8 +18,8 @@ class FirebaseTaskLogger extends TaskLogger {
         this.type = TYPES.FIREBASE;
     }
 
-    static async factory(task, {baseFirebaseUrl, firebaseSecret}) {
-        const taskLogger = new FirebaseTaskLogger(task, {baseFirebaseUrl, firebaseSecret});
+    static async factory(task, {type, baseFirebaseUrl, firebaseSecret}) {
+        const taskLogger = new FirebaseTaskLogger(task, {type, baseFirebaseUrl, firebaseSecret});
 
         if (!baseFirebaseUrl) {
             throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
@@ -88,6 +88,9 @@ class FirebaseTaskLogger extends TaskLogger {
                 }, {
                     ...this.opts
                 });
+                step.on('error', (err) => {
+                    this.emit('error', err);
+                });
 
                 step.logs = {};
 
@@ -146,6 +149,10 @@ class FirebaseTaskLogger extends TaskLogger {
 
     _reportMemoryLimit() {
         this.baseRef.child('metrics').child('limits').child('memory').push(this.memoryLimit);
+    }
+
+    _reportLogSize(size) {
+        this.baseRef.child('metrics').child('log').child('total').set(size);
     }
 
     _reportVisibility() {

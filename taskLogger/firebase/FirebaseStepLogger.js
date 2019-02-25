@@ -78,6 +78,10 @@ class FirebaseStepLogger extends BaseStepLogger {
         this.stepRef.child('metrics').child('cpu').push({ time, usage: cpuUsage });
     }
 
+    _reportLogSize(size) {
+        this.stepRef.child('metrics').child('log').child('total').set(size);
+    }
+
     reportName() {
         this.stepRef.child('name').set(this.name);
     }
@@ -89,24 +93,6 @@ class FirebaseStepLogger extends BaseStepLogger {
     async delete() {
         return this.stepRef.remove();
     }
-
-    // TODO see what to do with these
-    _getReference() {
-        return this.stepRef.toString();
-    }
-
-    _getLogsReference() {
-        return this.stepRef.child('logs').toString();
-    }
-
-    _getLastUpdateReference() {
-        return this.lastUpdateRef.child('lastUpdate').toString();
-    }
-
-    _getMetricsLogsReference() {
-        return this.stepRef.child('metrics').child('logs').toString();
-    }
-
 }
 
 module.exports = FirebaseStepLogger;

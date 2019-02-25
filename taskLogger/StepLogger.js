@@ -190,6 +190,10 @@ class StepLogger extends EventEmitter {
         this._reportCpuUsage(time, cpuUsage);
     }
 
+    setLogSize(size) {
+        this._reportLogSize(size);
+    }
+
     markTerminating() {
         if (this.status === STATUS.RUNNING) {
             this.status = STATUS.TERMINATING;
