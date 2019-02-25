@@ -1,6 +1,7 @@
 'use strict';
 
 const _                                = require('lodash');
+const Firebase                         = require('firebase');
 const debug                            = require('debug')('codefresh:taskLogger');
 const Q                                = require('q');
 const CFError                          = require('cf-errors');
@@ -12,46 +13,49 @@ const { TYPES, STATUS }                = require('../enums');
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 
 class FirebaseTaskLogger extends TaskLogger {
-    constructor(task) {
-        super(task);
+    constructor(task, opts) {
+        super(task, opts);
     }
 
-    static async factory(task, {baseFirebaseUrl, FirebaseLib, firebaseSecret}) {
-        const taskLogger = new FirebaseTaskLogger(task);
+    static async factory(task, {baseFirebaseUrl, firebaseSecret}) {
+        const taskLogger = new FirebaseTaskLogger(task, {baseFirebaseUrl, firebaseSecret});
 
         if (!baseFirebaseUrl) {
             throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
         }
         taskLogger.baseFirebaseUrl = baseFirebaseUrl;
 
-        if (!FirebaseLib) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
-        }
-        taskLogger.FirebaseLib = FirebaseLib;
-
         if (!firebaseSecret) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because firebaseSecret must be provided");
+            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase secret reference must be provided");
         }
         taskLogger.firebaseSecret = firebaseSecret;
 
         taskLogger.baseUrl = `${taskLogger.baseFirebaseUrl}/${taskLogger.jobId}`;
-        taskLogger.baseRef = new taskLogger.FirebaseLib(taskLogger.baseUrl);
+        taskLogger.baseRef = new Firebase(taskLogger.baseUrl);
 
         taskLogger.lastUpdateUrl = `${taskLogger.baseUrl}/lastUpdate`;
-        taskLogger.lastUpdateRef = new taskLogger.FirebaseLib(taskLogger.lastUpdateUrl);
+        taskLogger.lastUpdateRef = new Firebase(taskLogger.lastUpdateUrl);
 
         taskLogger.stepsUrl = `${taskLogger.baseUrl}/steps`;
-        taskLogger.stepsRef = new taskLogger.FirebaseLib(taskLogger.stepsUrl);
+        taskLogger.stepsRef = new Firebase(taskLogger.stepsUrl);
 
         try {
-            await Q.ninvoke(taskLogger.baseRef, 'authWithCustomToken', firebaseSecret);
+            if (!FirebaseTaskLogger.authenticated) {
+                await Q.ninvoke(taskLogger.baseRef, 'authWithCustomToken', firebaseSecret);
+                debug(`TaskLogger created and authenticated to firebase url: ${taskLogger.baseUrl}`);
+
+                // workaround to not authenticate each time
+                FirebaseTaskLogger.authenticated = true;
+                FirebaseStepLogger.authenticated = true;
+            } else {
+                debug('TaskLogger created without authentication');
+            }
         } catch (err) {
             throw new CFError({
                 cause: err,
                 message: `Failed to create taskLogger because authentication to firebase url ${taskLogger.baseUrl}`
             });
         }
-        debug(`TaskLogger created and authenticated to firebase url: ${taskLogger.baseUrl}`);
 
         return taskLogger;
     }
@@ -63,7 +67,6 @@ class FirebaseTaskLogger extends TaskLogger {
             name
         }, {
             baseFirebaseUrl: this.baseFirebaseUrl,
-            FirebaseLib: this.FirebaseLib,
             firebaseSecret: this.firebaseSecret
         });
 
@@ -99,7 +102,6 @@ class FirebaseTaskLogger extends TaskLogger {
                     name: key
                 }, {
                     baseFirebaseUrl: this.baseFirebaseUrl,
-                    FirebaseLib: this.FirebaseLib,
                     firebaseSecret: this.firebaseSecret
                 });
 
@@ -142,7 +144,7 @@ class FirebaseTaskLogger extends TaskLogger {
         this.stepsRef.limitToLast(1).once('value', (snapshot) => {
             try {
                 _.forEach(snapshot.val(), (step, stepKey) => {
-                    const stepRef = new this.FirebaseLib(`${this.stepsUrl}/${stepKey}`);
+                    const stepRef = new Firebase(`${this.stepsUrl}/${stepKey}`);
                     stepRef.child('logs').push(`\x1B[31m${message}\x1B[0m\r\n`);
                 });
                 deferred.resolve();
@@ -223,5 +225,6 @@ class FirebaseTaskLogger extends TaskLogger {
     }
 }
 FirebaseTaskLogger.TYPE = TYPES.FIREBASE;
+FirebaseTaskLogger.authenticated = false;
 
 module.exports = FirebaseTaskLogger;

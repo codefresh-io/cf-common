@@ -17,8 +17,9 @@ const { STATUS, VISIBILITY } = require('./enums');
  * @returns {{create: create, finish: finish}}
  */
 class TaskLogger extends EventEmitter {
-    constructor({accountId, jobId}) {
+    constructor({accountId, jobId}, opts) {
         super();
+        this.opts = opts;
 
         if (!accountId) {
             throw new CFError(ErrorTypes.Error, "failed to create taskLogger because accountId must be provided");
@@ -147,6 +148,18 @@ class TaskLogger extends EventEmitter {
     async setStatus(status) {
         this.status = status;
         return this._reportStatus();
+    }
+
+    getConfiguration() {
+        return {
+            step: {
+                accountId: this.accountId,
+                jobId: this.jobId,
+            },
+            opts: {
+                ...this.opts
+            }
+        }
     }
 }
 

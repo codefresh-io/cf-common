@@ -1,6 +1,7 @@
 'use strict';
 
 const Q                  = require('q');
+const Firebase           = require('firebase');
 const debug              = require('debug')('codefresh:stepLogger');
 const CFError            = require('cf-errors');
 const ErrorTypes         = CFError.errorTypes;
@@ -8,40 +9,43 @@ const { STATUS, TYPES }  = require('../enums');
 const BaseStepLogger     = require('../StepLogger');
 
 class FirebaseStepLogger extends BaseStepLogger {
-    constructor(step) {
-        super(step);
+    constructor(step, opts) {
+        super(step, opts);
     }
 
-    static async factory(step, {baseFirebaseUrl, FirebaseLib, firebaseSecret}) {
-        const stepLogger = new FirebaseStepLogger(step);
+    static async factory(step, {baseFirebaseUrl, firebaseSecret}) {
+        const stepLogger = new FirebaseStepLogger(step, {baseFirebaseUrl, firebaseSecret});
 
         if (!baseFirebaseUrl) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
+            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because baseFirebaseUrl must be provided");
         }
         stepLogger.baseFirebaseUrl = baseFirebaseUrl;
 
-        if (!FirebaseLib) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
-        }
-        stepLogger.FirebaseLib = FirebaseLib;
-
         if (!firebaseSecret) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because firebaseSecret must be provided");
+            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because Firebase secret reference must be provided");
         }
         stepLogger.firebaseSecret = firebaseSecret;
 
-
         stepLogger.baseUrl = `${stepLogger.baseFirebaseUrl}/${stepLogger.jobId}`;
-        stepLogger.baseRef = new stepLogger.FirebaseLib(stepLogger.baseUrl);
+        stepLogger.baseRef = new Firebase(stepLogger.baseUrl);
 
         stepLogger.lastUpdateUrl = `${stepLogger.baseUrl}/lastUpdate`;
-        stepLogger.lastUpdateRef = new stepLogger.FirebaseLib(stepLogger.lastUpdateUrl);
+        stepLogger.lastUpdateRef = new Firebase(stepLogger.lastUpdateUrl);
 
         stepLogger.stepUrl = `${stepLogger.baseUrl}/steps/${stepLogger.name}`;
-        stepLogger.stepRef = new stepLogger.FirebaseLib(stepLogger.stepUrl);
+        stepLogger.stepRef = new Firebase(stepLogger.stepUrl);
 
         try {
-            await Q.ninvoke(stepLogger.baseRef, 'authWithCustomToken', firebaseSecret);
+            if (!FirebaseStepLogger.authenticated) {
+                await Q.ninvoke(stepLogger.baseRef, 'authWithCustomToken', firebaseSecret);
+                debug(`TaskLogger created and authenticated to firebase url: ${stepLogger.baseUrl}`);
+
+                // workaround to not authenticate each time
+                FirebaseStepLogger.authenticated = true;
+            } else {
+                debug('StepLogger created without authentication');
+            }
+
         } catch (err) {
             throw new CFError({
                 cause: err,
@@ -135,6 +139,7 @@ class FirebaseStepLogger extends BaseStepLogger {
 
 }
 FirebaseStepLogger.TYPE = TYPES.FIREBASE;
+FirebaseStepLogger.authenticated = false;
 
 
 module.exports = FirebaseStepLogger;

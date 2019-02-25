@@ -4,8 +4,9 @@ const ErrorTypes   = CFError.errorTypes;
 const { STATUS } = require('./enums');
 
 class StepLogger extends EventEmitter {
-    constructor({accountId, jobId, name}) {
+    constructor({accountId, jobId, name}, opts) {
         super();
+        this.opts;
 
         if (!accountId) {
             throw new CFError(ErrorTypes.Error, "failed to create stepLogger because accountId must be provided");
@@ -205,6 +206,19 @@ class StepLogger extends EventEmitter {
     async setStatus(status) {
         this.status = status;
         return this._reportStatus();
+    }
+
+    getConfiguration() {
+        return {
+            step: {
+                accountId: this.accountId,
+                jobId: this.jobId,
+                name: this.name,
+            },
+            opts: {
+                ...this.opts
+            }
+        }
     }
 }
 
