@@ -6,20 +6,20 @@ const debug                            = require('debug')('codefresh:taskLogger'
 const Q                                = require('q');
 const CFError                          = require('cf-errors');
 const ErrorTypes                       = CFError.errorTypes;
-const TaskLogger                       = require('../TaskLogger');
+const BaseTaskLogger                   = require('../TaskLogger');
 const StepLogger                       = require('./StepLogger');
 const { TYPES }                        = require('../enums');
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 
-class FirebaseTaskLogger extends TaskLogger {
+class FirebaseTaskLogger extends BaseTaskLogger {
     constructor(task, opts) {
         super(task, opts);
         this.type = TYPES.FIREBASE;
     }
 
     static async factory(task, opts) {
-        const taskLogger = new TaskLogger(task, opts);
+        const taskLogger = new FirebaseTaskLogger(task, opts);
 
         const {baseFirebaseUrl, firebaseSecret} = opts;
 
@@ -43,12 +43,12 @@ class FirebaseTaskLogger extends TaskLogger {
         taskLogger.stepsRef = new Firebase(taskLogger.stepsUrl);
 
         try {
-            if (!TaskLogger.authenticated) {
+            if (!FirebaseTaskLogger.authenticated) {
                 await Q.ninvoke(taskLogger.baseRef, 'authWithCustomToken', firebaseSecret);
                 debug(`TaskLogger created and authenticated to firebase url: ${taskLogger.baseUrl}`);
 
                 // workaround to not authenticate each time
-                TaskLogger.authenticated = true;
+                FirebaseTaskLogger.authenticated = true;
             } else {
                 debug('TaskLogger created without authentication');
             }
@@ -215,7 +215,7 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 }
-TaskLogger.TYPE          = TYPES.FIREBASE;
-TaskLogger.authenticated = false;
+FirebaseTaskLogger.TYPE          = TYPES.FIREBASE;
+FirebaseTaskLogger.authenticated = false;
 
 module.exports = FirebaseTaskLogger;

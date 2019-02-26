@@ -7,7 +7,7 @@ const ErrorTypes         = CFError.errorTypes;
 const { STATUS }         = require('../enums');
 const BaseStepLogger     = require('../StepLogger');
 
-class StepLogger extends BaseStepLogger {
+class FirebaseStepLogger extends BaseStepLogger {
     constructor(step, opts) {
         super(step, opts);
 
@@ -111,4 +111,4 @@ class StepLogger extends BaseStepLogger {
     }
 }
 
-module.exports = StepLogger;
+module.exports = FirebaseStepLogger;
