@@ -1,103 +1,193 @@
-describe('7 restoreExistingSteps', function () {
+const _ = require('lodash');
+const proxyquire = require('proxyquire').noCallThru();
+const Q          = require('q');
+const chai       = require('chai');
+const expect     = chai.expect;
+const sinon      = require('sinon');
+const sinonChai  = require('sinon-chai');
+chai.use(sinonChai);
+const { TYPES, STATUS, VISIBILITY } = require('../../enums');
+const createFirebaseStub = require('./FirebaseStub');
 
-    describe('positive', function () {
-        it('should not create any steps in case of a missing stepsReferences object', function () {
-            const onceSpy = sinon.spy((val, callback) => {
-                callback({
-                    val: () => {
-                        return undefined;
-                    }
-                });
-            });
-            var Firebase = createMockFirebase({
-                onceSpy
-            });
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
-            return logger.restoreExistingSteps()
-                .then(() => {
-                    expect(logger.steps).to.deep.equal({});
-                });
-        });
+let Firebase;
 
-        it('should not create any steps in case of non previous existing steps', function () {
-            const onceSpy = sinon.spy((val, callback) => {
-                callback({
-                    val: () => {
-                        return {};
-                    }
-                });
-            });
-            var Firebase = createMockFirebase({
-                onceSpy
-            });
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
-            return logger.restoreExistingSteps()
-                .then(() => {
-                    expect(logger.steps).to.deep.equal({});
-                });
-        });
+const getTaskLoggerInstance = async (task = { accountId: 'accountId', jobId: 'jobId' },
+    opts = { baseFirebaseUrl: 'url', firebaseSecret: 'secret' }) => {
+    Firebase = createFirebaseStub();
 
-        it('should restore 2 steps', function () {
-            let it = 1;
-            const responses = {
-                first: {
-                    'ref1': 'step1',
-                    'ref2': 'step2'
-                },
-                second: 'value'
-            };
-            let currentResponse = responses.first;
-            const onceSpy = sinon.spy((val, callback) => {
-                callback({
-                    val: () => {
-                        const response = currentResponse;
-                        currentResponse = responses.second + it;
-                        it++;
-                        return response;
-                    }
-                });
-            });
-            var Firebase = createMockFirebase({
-                onceSpy
-            });
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
-            return logger.restoreExistingSteps()
-                .then(() => {
-                    _.forEach(logger.steps, (step) => {
-                        delete step.firebaseRef;
-                    });
-                    expect(logger.steps).to.deep.equal({
-                        "value1": {
-                            "logs": {},
-                            "name": "value1",
-                            "status": "value2",
-                        },
-                        "value3": {
-                            "logs": {},
-                            "name": "value3",
-                            "status": "value4"
-                        }
-                    });
-                });
-        });
+    const TaskLogger = proxyquire('../TaskLogger', {
+        'firebase': Firebase,
     });
 
-    describe('negative', function () {
-        it('should reject in case of not responding in 5 seconds', function () {
-            this.timeout(6000);
-            var Firebase = createMockFirebase();
-            var Logger     = createMockLogger();
-            var logger = new Logger("progress_id", "firebaseUrl", Firebase);
-            return logger.restoreExistingSteps()
-                .then(() => {
+    const taskLogger = await TaskLogger.factory(task, opts);
+    taskLogger.emit  = sinon.spy(taskLogger.emit);
+
+    return taskLogger;
+};
+
+describe('Firebase TaskLogger tests', function () {
+
+    describe('factory', () => {
+
+        describe('positive', () => {
+
+            it('should succeed if all data is passed and authentication succeeded', async () => {
+                const Firebase = createFirebaseStub();
+
+                const TaskLogger = proxyquire('../TaskLogger', {
+                    'firebase': Firebase,
+                });
+
+                const task = {accountId: 'accountId', jobId: 'jobId'};
+                const opts = {
+                    baseFirebaseUrl: 'url',
+                    firebaseSecret: 'secret'
+                };
+                expect(TaskLogger.authenticated).to.equal(false);
+                await TaskLogger.factory(task, opts);
+                expect(Firebase.__authWithCustomTokenStub).to.have.been.calledWith('secret');
+                expect(TaskLogger.authenticated).to.equal(true);
+            });
+
+            it('should perform authentication only once', async () => {
+                const Firebase = createFirebaseStub();
+
+                const TaskLogger = proxyquire('../TaskLogger', {
+                    'firebase': Firebase,
+                });
+
+                const task = {accountId: 'accountId', jobId: 'jobId'};
+                const opts = {
+                    baseFirebaseUrl: 'url',
+                    firebaseSecret: 'secret'
+                };
+                expect(TaskLogger.authenticated).to.equal(false);
+                await TaskLogger.factory(task, opts);
+                await TaskLogger.factory(task, opts);
+                expect(Firebase.__authWithCustomTokenStub.callCount).to.equal(1);
+            });
+        });
+
+        describe('negative', () => {
+
+            it('should throw an error in case authentication failed', async () => {
+                const Firebase = createFirebaseStub();
+
+                const TaskLogger = proxyquire('../TaskLogger', {
+                    'firebase': Firebase,
+                });
+
+                const task = {accountId: 'accountId', jobId: 'jobId'};
+                const opts = {
+                    baseFirebaseUrl: 'url',
+                    firebaseSecret: 'secret'
+                };
+                Firebase.__authWithCustomTokenStub.yields(new Error('my error'));
+                try {
+                    await TaskLogger.factory(task, opts);
                     throw new Error('should have failed');
-                }, (err) => {
-                    expect(err.toString()).to.contain('Failed to restore steps metadata from Firebase');
+                } catch (err) {
+                    expect(err.toString()).to.equal('Error: Failed to create taskLogger because authentication to firebase url url/jobId; caused by Error: my error');
+                }
+            });
+
+            it('should fail in case of a missing baseFirebaseUrl', async () => {
+                const Firebase = createFirebaseStub();
+
+                const TaskLogger = proxyquire('../TaskLogger', {
+                    'firebase': Firebase,
                 });
+
+                const task = {accountId: 'accountId', jobId: 'jobId'};
+                const opts = {
+                    firebaseSecret: 'secret'
+                };
+
+                try {
+                    await TaskLogger.factory(task, opts);
+                    throw new Error('should have failed');
+                } catch (err) {
+                    expect(err.toString()).to.equal('Error: failed to create taskLogger because baseFirebaseUrl must be provided');
+                }
+            });
+
+            it('should fail in case of a missing firebaseSecret', async () => {
+                const Firebase = createFirebaseStub();
+
+                const TaskLogger = proxyquire('../TaskLogger', {
+                    'firebase': Firebase,
+                });
+
+                const task = {accountId: 'accountId', jobId: 'jobId'};
+                const opts = {
+                    baseFirebaseUrl: 'url',
+                };
+
+                try {
+                    await TaskLogger.factory(task, opts);
+                    throw new Error('should have failed');
+                } catch (err) {
+                    expect(err.toString()).to.equal('Error: failed to create taskLogger because Firebase secret reference must be provided');
+                }
+            });
+
         });
     });
 
+    describe('reporting', () => {
+        it('should report memory usage', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            const time = new Date();
+            const memoryUsage = 'usage';
+            taskLogger._reportMemoryUsage(time, memoryUsage);
+            expect(Firebase.__pushSpy).to.have.been.calledWith({time, usage: memoryUsage});
+        });
+
+        it('should report memory limit', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.memoryLimit = 'limit';
+            taskLogger._reportMemoryLimit();
+            expect(Firebase.__pushSpy).to.have.been.calledWith(taskLogger.memoryLimit);
+        });
+
+        it('should report log size', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.logSize = 'size';
+            taskLogger._reportLogSize();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.logSize);
+        });
+
+        it('should report visibility', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.visibility = 'public';
+            taskLogger._reportVisibility();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.visibility);
+        });
+
+        it('should report data', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.data = {key: 'value'};
+            taskLogger._reportData();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.data);
+        });
+
+        it('should report status', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.status = 'running';
+            taskLogger._reportStatus();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.status);
+        });
+
+        it('should report accountId', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.reportAccountId();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.accountId);
+        });
+
+        it('should report job id', async () => {
+            const taskLogger = await getTaskLoggerInstance();
+            taskLogger.reportId();
+            expect(Firebase.__setSpy).to.have.been.calledWith(taskLogger.jobId);
+        });
+    });
 });

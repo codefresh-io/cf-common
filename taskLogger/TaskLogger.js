@@ -2,7 +2,6 @@
 
 const _            = require('lodash');
 const CFError      = require('cf-errors');
-const ErrorTypes   = CFError.errorTypes;
 const EventEmitter = require('events');
 const rp           = require('request-promise');
 const { STATUS, VISIBILITY } = require('./enums');
@@ -21,12 +20,12 @@ class TaskLogger extends EventEmitter {
         this.opts = opts;
 
         if (!accountId && !opts.skipAccountValidation) { // skipAccountValidation is only here to allow downloading a launched-composition single step
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because accountId must be provided");
+            throw new CFError("failed to create taskLogger because accountId must be provided");
         }
         this.accountId = accountId;
 
         if (!jobId) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
+            throw new CFError("failed to create taskLogger because jobId must be provided");
         }
         this.jobId = jobId;
 
@@ -121,7 +120,7 @@ class TaskLogger extends EventEmitter {
 
     fatalError(err) {
         if (!err) {
-            throw new CFError(ErrorTypes.Error, "fatalError was called without an error. not valid.");
+            throw new CFError("fatalError was called without an error. not valid.");
         }
         if (this.fatal) {
             return;

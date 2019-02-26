@@ -13,6 +13,23 @@ const getStepLoggerInstance = (task = {accountId: 'accountId', jobId: 'jobId', n
 
     const stepLogger = new StepLogger(task, opts);
     stepLogger.emit = sinon.spy();
+    stepLogger.setFinishTimestamp = sinon.spy(stepLogger.setFinishTimestamp);
+    stepLogger.updateLastUpdate = sinon.spy(stepLogger.updateLastUpdate);
+    stepLogger.setStatus = sinon.spy(stepLogger.setStatus);
+    stepLogger.setCreationTimestamp = sinon.spy(stepLogger.setCreationTimestamp);
+    stepLogger._reportStatus = sinon.spy();
+    stepLogger._reportFinishTimestamp = sinon.spy();
+    stepLogger._reportCreationTimestamp = sinon.spy();
+    stepLogger._reportLog = sinon.spy();
+    stepLogger._reportLastUpdate = sinon.spy();
+    stepLogger._reportPrevioulyExecuted = sinon.spy();
+    stepLogger._reportMemoryUsage = sinon.spy();
+    stepLogger._reportCpuUsage = sinon.spy();
+    stepLogger._reportLogSize = sinon.spy();
+
+    stepLogger.setStatus(STATUS.PENDING);
+    stepLogger.setStatus.resetHistory();
+    stepLogger._reportStatus.resetHistory();
     return stepLogger;
 };
 
@@ -56,210 +73,313 @@ describe('Base StepLogger tests', function () {
         });
     });
 
+    describe('start', () => {
 
-
-    describe.skip('create', () => {
-        it('should create a new step in case it does not exist', () => {
-            const taskLogger = getTaskLoggerInstance();
-            taskLogger.create('new-step');
-            expect(firebaseStepLoggerMockedClass).to.have.been.calledOnce;
+        it('should start a step in case the step is in pending', () => {
+            const stepLogger = getStepLoggerInstance();
+            expect(stepLogger.getStatus()).to.equal(STATUS.PENDING);
+            stepLogger.start();
+            expect(stepLogger._reportStatus).to.have.been.calledWith();
+            expect(stepLogger.getStatus()).to.equal(STATUS.RUNNING);
         });
 
-        it('should add created step to steps field', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            expect(taskLogger.steps).to.deep.equal({'new-step': stepLogger});
-        });
-
-        it('should return an existing step in case it was already created', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            expect(stepLogger).to.equal(taskLogger.create('new-step'));
-            expect(firebaseStepLoggerMockedClass).to.have.been.calledOnce;
-        });
-
-        it('should listen on errors from step and emit an error in case invoked', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            expect(stepLogger.on).to.have.been.calledWith('error');
-            const error = new Error('my error');
-            stepLogger.emit('error', error);
-            expect(taskLogger.emit).to.have.been.calledWith('error', error);
-        });
-
-        it('should listen on finished step and delete it from steps', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            expect(taskLogger.steps).to.deep.equal({'new-step': stepLogger});
-            expect(stepLogger.on).to.have.been.calledWith('finished');
-            stepLogger.emit('finished');
-            expect(taskLogger.steps).to.deep.equal({});
-        });
-
-        it('should reset an existing step if asked', () => {
-            const taskLogger = getTaskLoggerInstance();
-            let stepLogger = taskLogger.create('new-step');
-            expect(stepLogger.setStatus).to.not.have.been.called;
-            stepLogger = taskLogger.create('new-step', undefined, true);
-            expect(stepLogger.setStatus).to.have.been.calledWith(STATUS.PENDING);
-            expect(stepLogger.setFinishTimestamp).to.have.been.calledWith('');
-            expect(stepLogger.setCreationTimestamp).to.have.been.calledWith('');
-        });
-
-        it('should run creation logic in case asked for', () => {
-            const taskLogger = getTaskLoggerInstance();
-            let stepLogger = taskLogger.create('new-step', undefined, undefined, true);
-            expect(stepLogger.setStatus).to.have.been.calledWith(STATUS.PENDING);
-            expect(stepLogger.reportName).to.have.been.calledWith();
-            expect(stepLogger.clearLogs).to.have.been.calledWith();
-            expect(taskLogger.newStepAdded).to.have.been.calledWith(stepLogger);
-        });
-
-        it('should report back about a new step if eventReporting is passed', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const eventReporting = {
-                token: 'token',
-                url: 'url'
-            };
-            taskLogger.create('new-step', eventReporting);
-            expect(rpStub).to.have.been.calledWith({
-                uri: eventReporting.url,
-                headers: {Authorization: eventReporting.token},
-                method: 'POST',
-                body: { action: 'new-progress-step', name: 'new-step'},
-                json: true
-            });
+        it('should not do anything in case the step is not in pending', () => {
+            const stepLogger = getStepLoggerInstance();
+            stepLogger.start();
+            expect(stepLogger._reportStatus.callCount).to.equal(1);
+            stepLogger.start();
+            expect(stepLogger._reportStatus.callCount).to.equal(1);
+            expect(stepLogger.getStatus()).to.equal(STATUS.RUNNING);
         });
 
     });
 
-    describe.skip('finish', () => {
-        it('should set finished field with true', () => {
-            const taskLogger = getTaskLoggerInstance();
-            expect(taskLogger.finished).to.equal(false);
-            taskLogger.finish();
-            expect(taskLogger.finished).to.equal(true);
-        });
-
-        it('should call finish of each created step', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            taskLogger.finish();
-            expect(stepLogger.finish.callCount).to.equal(1);
-        });
-    });
-
-    describe.skip('fatalError', () => {
-        it('should set fatal field to true', () => {
-            const taskLogger = getTaskLoggerInstance();
-            expect(taskLogger.fatal).to.equal(false);
-            taskLogger.fatalError(new Error('fatal error'));
-            expect(taskLogger.fatal).to.equal(true);
-        });
-
-        it('should create a new step in case no steps exists', () => {
-            const taskLogger = getTaskLoggerInstance();
-            taskLogger.fatalError(new Error('fatal error'));
-            expect(taskLogger.create).to.have.been.calledWith('Something went wrong');
-        });
-
-        it('should call finish of each created step', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const stepLogger = taskLogger.create('new-step');
-            taskLogger.fatalError(new Error('fatal error'));
-            expect(stepLogger.finish.callCount).to.equal(1);
-        });
-
-    });
-
-    describe.skip('updateMemoryUsage', () => {
-
-        it('should report memory usage', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const time = new Date();
-            const memoryUsage = 'usage';
-            taskLogger.updateMemoryUsage(time, memoryUsage);
-            expect(taskLogger._reportMemoryUsage).to.have.been.calledWith(time, memoryUsage);
-        });
-
-    });
-
-    describe.skip('setMemoryLimit', () => {
-
-        it('should set memory limit', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const memoryLimit = 'limit';
-            taskLogger.setMemoryLimit(memoryLimit);
-            expect(taskLogger.memoryLimit).to.equal(memoryLimit);
-            expect(taskLogger._reportMemoryLimit).to.have.been.calledWith();
-        });
-
-    });
-
-    describe.skip('setLogSize', () => {
-
-        it('should set log size', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const logSize = 'size';
-            taskLogger.setLogSize(logSize);
-            expect(taskLogger.logSize).to.equal(logSize);
-            expect(taskLogger._reportLogSize).to.have.been.calledWith();
-        });
-
-    });
-
-    describe.skip('setVisibility', () => {
+    describe('write', () => {
 
         describe('positive', () => {
-            it('should set the visiblity to private', () => {
-                const taskLogger = getTaskLoggerInstance();
-                taskLogger.setVisibility(VISIBILITY.PRIVATE);
-                expect(taskLogger.visibility).to.equal(VISIBILITY.PRIVATE);
-                expect(taskLogger._reportVisibility).to.have.been.calledWith();
-            });
-
-            it('should set the visiblity to public', () => {
-                const taskLogger = getTaskLoggerInstance();
-                taskLogger.setVisibility(VISIBILITY.PUBLIC);
-                expect(taskLogger.visibility).to.equal(VISIBILITY.PUBLIC);
-                expect(taskLogger._reportVisibility).to.have.been.calledWith();
+            it('should start a step', () => {
+                const stepLogger = getStepLoggerInstance();
+                const message = 'message';
+                stepLogger.write(message);
+                expect(stepLogger._reportLog).to.have.been.calledWith(message);
+                expect(stepLogger.updateLastUpdate).to.have.been.calledWith();
             });
         });
 
         describe('negative', () => {
-            it('should fail in case the visiblity is not supported', () => {
-                const taskLogger = getTaskLoggerInstance();
-                try {
-                    taskLogger.setVisibility('non-valid');
-                    throw new Error('should have failed');
-                } catch (err) {
-                    expect(err.toString()).to.equal('Error: Visibility: non-valid is not supported. use public/private');
-                }
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                const message = 'message';
+                stepLogger.write(message);
+                expect(stepLogger.emit).to.have.been.calledWith('error');
             });
         });
 
     });
 
-    describe.skip('setData', () => {
+    describe('debug', () => {
 
-        it('should set data', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const data = {};
-            taskLogger.setData(data);
-            expect(taskLogger.data).to.equal(data);
-            expect(taskLogger._reportData).to.have.been.calledWith();
+        describe('positive', () => {
+            it('should start a step', () => {
+                const stepLogger = getStepLoggerInstance();
+                const message = 'message';
+                stepLogger.debug(message);
+                expect(stepLogger._reportLog).to.have.been.calledWith(message + '\r\n');
+                expect(stepLogger.updateLastUpdate).to.have.been.calledWith();
+            });
+        });
+
+        describe('negative', () => {
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                const message = 'message';
+                stepLogger.debug(message);
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
         });
 
     });
 
-    describe.skip('setData', () => {
+    describe('warn', () => {
 
-        it('should set data', () => {
-            const taskLogger = getTaskLoggerInstance();
-            const status = 'status';
-            taskLogger.setStatus(status);
-            expect(taskLogger.status).to.equal(status);
-            expect(taskLogger._reportStatus).to.have.been.calledWith();
+        describe('positive', () => {
+            it('should start a step', () => {
+                const stepLogger = getStepLoggerInstance();
+                const message = 'message';
+                stepLogger.warn(message);
+                expect(stepLogger._reportLog).to.have.been.calledWith(`\x1B[01;93m${message}\x1B[0m\r\n`);
+                expect(stepLogger.updateLastUpdate).to.have.been.calledWith();
+            });
+        });
+
+        describe('negative', () => {
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                const message = 'message';
+                stepLogger.warn(message);
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
+        });
+
+    });
+
+    describe('info', () => {
+
+        describe('positive', () => {
+            it('should start a step', () => {
+                const stepLogger = getStepLoggerInstance();
+                const message = 'message';
+                stepLogger.info(message);
+                expect(stepLogger._reportLog).to.have.been.calledWith(message + '\r\n');
+                expect(stepLogger.updateLastUpdate).to.have.been.calledWith();
+            });
+        });
+
+        describe('negative', () => {
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                const message = 'message';
+                stepLogger.info(message);
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
+        });
+
+    });
+
+    describe('finish', () => {
+
+        describe('positive', () => {
+            it('should conclude a step with success status in case it is running', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.finish();
+                expect(stepLogger.getStatus()).to.equal(STATUS.SUCCESS);
+                expect(stepLogger.emit).to.have.been.calledWith('finished');
+            });
+
+            it('should conclude a step with error in case it is running and an error reported', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.finish(new Error('error'));
+                expect(stepLogger.getStatus()).to.equal(STATUS.ERROR);
+                expect(stepLogger.emit).to.have.been.calledWith('finished');
+            });
+
+            it('should conclude a step with approved in case it is in pending approval status without an error', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.markPendingApproval();
+                stepLogger.finish();
+                expect(stepLogger.getStatus()).to.equal(STATUS.APPROVED);
+                expect(stepLogger.emit).to.have.been.calledWith('finished');
+            });
+
+            it('should conclude a step with approved in case it is in pending approval status without an error', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.markPendingApproval();
+                stepLogger.finish(new Error('error'));
+                expect(stepLogger.getStatus()).to.equal(STATUS.DENIED);
+                expect(stepLogger.emit).to.have.been.calledWith('finished');
+            });
+
+            it('should mark a step as skipped', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.finish(undefined, true);
+                expect(stepLogger.getStatus()).to.equal(STATUS.SKIPPED);
+                expect(stepLogger.emit).to.have.been.calledWith('finished');
+            });
+
+            it('should conclude step with status terminated in case it is terminating', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.markTerminating();
+                stepLogger.finish(new Error('error'));
+                expect(stepLogger.getStatus()).to.equal(STATUS.TERMINATED);
+            });
+
+            it('should conclude step with status success in case it is terminating but an error was not reported', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.markTerminating();
+                stepLogger.finish();
+                expect(stepLogger.getStatus()).to.equal(STATUS.SUCCESS);
+            });
+        });
+
+        describe('negative', () => {
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                stepLogger.finish();
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
+
+            it('should emit an error in case the step is not in running/pending/pending-approval/terminating status', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.setStatus(STATUS.SUCCESS);
+                stepLogger.finish(new Error('error'));
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
+        });
+
+    });
+
+    describe('updateLastUpdate', () => {
+
+        it('should update last date of a change', () => {
+            const stepLogger = getStepLoggerInstance();
+            stepLogger.updateLastUpdate();
+            expect(stepLogger._reportLastUpdate).to.have.been.calledWith();
+        });
+
+    });
+
+    describe('setFinishTimestamp', () => {
+
+        it('should update finish timestamp', () => {
+            const stepLogger = getStepLoggerInstance();
+            const date = new Date();
+            stepLogger.setFinishTimestamp(date);
+            expect(stepLogger._reportFinishTimestamp).to.have.been.calledWith();
+            expect(stepLogger.finishTimeStamp).to.equal(date);
+        });
+
+    });
+
+    describe('setCreationTimestamp', () => {
+
+        it('should update creation timestamp', () => {
+            const stepLogger = getStepLoggerInstance();
+            const date = new Date();
+            stepLogger.setCreationTimestamp(date);
+            expect(stepLogger._reportCreationTimestamp).to.have.been.calledWith();
+            expect(stepLogger.creationTimeStamp).to.equal(date);
+        });
+
+    });
+
+    describe('markPreviouslyExecuted', () => {
+
+        it('should update creation timestamp', () => {
+            const stepLogger = getStepLoggerInstance();
+            stepLogger.markPreviouslyExecuted();
+            expect(stepLogger._reportPrevioulyExecuted).to.have.been.calledWith();
+            expect(stepLogger.previouslyExecuted).to.equal(true);
+        });
+
+    });
+
+    describe('markPendingApproval', () => {
+
+        it('should mark as pending approval', () => {
+            const stepLogger = getStepLoggerInstance();
+            stepLogger.markPendingApproval();
+            expect(stepLogger.emit).to.have.been.calledWith('finished');
+            expect(stepLogger.pendingApproval).to.equal(true);
+            expect(stepLogger.getStatus()).to.equal(STATUS.PENDING_APPROVAL)
+        });
+
+    });
+
+    describe('updateMemoryUsage', () => {
+
+        it('should update memory usage', () => {
+            const stepLogger = getStepLoggerInstance();
+            const time = new Date();
+            const memoryUsage = 'usage';
+            stepLogger.updateMemoryUsage(time, memoryUsage);
+            expect(stepLogger._reportMemoryUsage).to.have.been.calledWith(time, memoryUsage);
+        });
+
+    });
+
+    describe('updateCpuUsage', () => {
+
+        it('should update cpu usage', () => {
+            const stepLogger = getStepLoggerInstance();
+            const time = new Date();
+            const cpuUsage = 'usage';
+            stepLogger.updateCpuUsage(time, cpuUsage);
+            expect(stepLogger._reportCpuUsage).to.have.been.calledWith(time, cpuUsage);
+        });
+
+    });
+
+    describe('setLogSize', () => {
+
+        it('should set log size', () => {
+            const stepLogger = getStepLoggerInstance();
+            const logSize = 'size';
+            stepLogger.setLogSize(logSize);
+            expect(stepLogger._reportLogSize).to.have.been.calledWith();
+        });
+
+    });
+
+    describe('markTerminating', () => {
+
+        describe('positive', () => {
+            it('should emit error in case step is not running', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.start();
+                stepLogger.markTerminating();
+                expect(stepLogger.getStatus()).to.equal(STATUS.TERMINATING);
+                expect(stepLogger._reportStatus).to.have.been.calledWith();
+            });
+        });
+
+        describe('negative', () => {
+            it('should emit error in case step is not running', () => {
+                const stepLogger = getStepLoggerInstance();
+                stepLogger.markTerminating();
+                expect(stepLogger.emit).to.have.been.calledWith('error');
+            });
         });
 
     });

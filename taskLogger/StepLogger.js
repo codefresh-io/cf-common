@@ -1,6 +1,5 @@
 const CFError = require('cf-errors');
 const EventEmitter = require('events');
-const ErrorTypes   = CFError.errorTypes;
 const { STATUS } = require('./enums');
 
 class StepLogger extends EventEmitter {
@@ -9,17 +8,17 @@ class StepLogger extends EventEmitter {
         this.opts = opts;
 
         if (!accountId && !opts.skipAccountValidation) {
-            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because accountId must be provided");
+            throw new CFError("failed to create stepLogger because accountId must be provided");
         }
         this.accountId = accountId;
 
         if (!jobId) {
-            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because jobId must be provided");
+            throw new CFError("failed to create stepLogger because jobId must be provided");
         }
         this.jobId = jobId;
 
         if (!name) {
-            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because name must be provided");
+            throw new CFError("failed to create stepLogger because name must be provided");
         }
         this.name = name;
 
@@ -48,9 +47,7 @@ class StepLogger extends EventEmitter {
         }
         else {
             this.emit("error",
-                new CFError(ErrorTypes.Error,
-                    "progress-logs 'write' handler was triggered after the job finished with message: %s",
-                    message));
+                new CFError("progress-logs 'write' handler was triggered after the job finished with message: %s", message));
         }
     }
 
@@ -64,8 +61,7 @@ class StepLogger extends EventEmitter {
         }
         else {
             this.emit("error",
-                new CFError(ErrorTypes.Error,
-                    "progress-logs 'debug' handler was triggered after the job finished with message: %s",
+                new CFError("progress-logs 'debug' handler was triggered after the job finished with message: %s",
                     message));
         }
     }
@@ -80,8 +76,7 @@ class StepLogger extends EventEmitter {
         }
         else {
             this.emit("error",
-                new CFError(ErrorTypes.Error,
-                    "progress-logs 'warning' handler was triggered after the job finished with message: %s",
+                new CFError("progress-logs 'warning' handler was triggered after the job finished with message: %s",
                     message));
         }
     }
@@ -96,8 +91,7 @@ class StepLogger extends EventEmitter {
         }
         else {
             this.emit("error",
-                new CFError(ErrorTypes.Error,
-                    "progress-logs 'info' handler was triggered after the job finished with message: %s",
+                new CFError("progress-logs 'info' handler was triggered after the job finished with message: %s",
                     message));
         }
     }
@@ -134,14 +128,12 @@ class StepLogger extends EventEmitter {
         else {
             if (err) {
                 this.emit("error",
-                    new CFError(ErrorTypes.Error,
-                        "progress-logs 'finish' handler was triggered after the job finished with err: %s",
+                    new CFError("progress-logs 'finish' handler was triggered after the job finished with err: %s",
                         err.toString()));
             }
             else {
                 this.emit("error",
-                    new CFError(ErrorTypes.Error,
-                        "progress-logs 'finish' handler was triggered after the job finished"));
+                    new CFError("progress-logs 'finish' handler was triggered after the job finished"));
             }
         }
     }
@@ -193,7 +185,8 @@ class StepLogger extends EventEmitter {
     }
 
     setLogSize(size) {
-        this._reportLogSize(size);
+        this.logSize = size;
+        this._reportLogSize();
     }
 
     markTerminating() {
@@ -203,8 +196,7 @@ class StepLogger extends EventEmitter {
         }
         else {
             this.emit("error",
-                new CFError(ErrorTypes.Error,
-                    `markTerminating is only allowed to step in running state status , current status : ${this.status}`));
+                new CFError(`markTerminating is only allowed to step in running state status , current status : ${this.status}`));
         }
     }
 
