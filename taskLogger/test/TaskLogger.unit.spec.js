@@ -48,7 +48,7 @@ const getTaskLoggerInstance = (task = {accountId: 'accountId', jobId: 'jobId'}, 
     firebaseStepLoggerMockedClass = createMockedStepClass();
     const TaskLogger = proxyquire('../taskLogger', {
         'request-promise': rpStub,
-        './firebase/FirebaseStepLogger': firebaseStepLoggerMockedClass
+        './firebase/StepLogger': firebaseStepLoggerMockedClass
     });
 
     const taskLogger = new TaskLogger(task, opts);

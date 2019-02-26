@@ -5,11 +5,7 @@ const CFError      = require('cf-errors');
 const ErrorTypes   = CFError.errorTypes;
 const EventEmitter = require('events');
 const rp           = require('request-promise');
-const { STATUS, VISIBILITY, TYPES } = require('./enums');
-
-const stepClasses = {
-    [TYPES.FIREBASE]: require('./firebase/FirebaseStepLogger')
-};
+const { STATUS, VISIBILITY } = require('./enums');
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
@@ -59,7 +55,8 @@ class TaskLogger extends EventEmitter {
         var step = this.steps[name];
         if (!step) {
 
-            step = new stepClasses[this.type]({
+            const stepClass = require(`./${this.type}/StepLogger`);
+            step = new stepClass({
                 accountId: this.accountId,
                 jobId: this.jobId,
                 name

@@ -7,19 +7,19 @@ const Q                                = require('q');
 const CFError                          = require('cf-errors');
 const ErrorTypes                       = CFError.errorTypes;
 const TaskLogger                       = require('../taskLogger');
-const FirebaseStepLogger               = require('./FirebaseStepLogger');
+const StepLogger                       = require('./StepLogger');
 const { TYPES }                        = require('../enums');
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 
-class FirebaseTaskLogger extends TaskLogger {
+class TaskLogger extends TaskLogger {
     constructor(task, opts) {
         super(task, opts);
         this.type = TYPES.FIREBASE;
     }
 
     static async factory(task, opts) {
-        const taskLogger = new FirebaseTaskLogger(task, opts);
+        const taskLogger = new TaskLogger(task, opts);
 
         const {baseFirebaseUrl, firebaseSecret} = opts;
 
@@ -43,12 +43,12 @@ class FirebaseTaskLogger extends TaskLogger {
         taskLogger.stepsRef = new Firebase(taskLogger.stepsUrl);
 
         try {
-            if (!FirebaseTaskLogger.authenticated) {
+            if (!TaskLogger.authenticated) {
                 await Q.ninvoke(taskLogger.baseRef, 'authWithCustomToken', firebaseSecret);
                 debug(`TaskLogger created and authenticated to firebase url: ${taskLogger.baseUrl}`);
 
                 // workaround to not authenticate each time
-                FirebaseTaskLogger.authenticated = true;
+                TaskLogger.authenticated = true;
             } else {
                 debug('TaskLogger created without authentication');
             }
@@ -83,7 +83,7 @@ class FirebaseTaskLogger extends TaskLogger {
             }
 
             Q.all(_.map(stepsReferences, async (name, key) => {
-                const step = new FirebaseStepLogger({
+                const step = new StepLogger({
                     accountId: this.accountId,
                     jobId: this.jobId,
                     name: key
@@ -215,7 +215,7 @@ class FirebaseTaskLogger extends TaskLogger {
         return deferred.promise;
     }
 }
-FirebaseTaskLogger.TYPE = TYPES.FIREBASE;
-FirebaseTaskLogger.authenticated = false;
+TaskLogger.TYPE          = TYPES.FIREBASE;
+TaskLogger.authenticated = false;
 
-module.exports = FirebaseTaskLogger;
+module.exports = TaskLogger;
