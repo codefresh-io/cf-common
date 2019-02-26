@@ -8,7 +8,7 @@ class StepLogger extends EventEmitter {
         super();
         this.opts = opts;
 
-        if (!accountId) {
+        if (!accountId && !opts.skipAccountValidation) {
             throw new CFError(ErrorTypes.Error, "failed to create stepLogger because accountId must be provided");
         }
         this.accountId = accountId;
@@ -211,19 +211,6 @@ class StepLogger extends EventEmitter {
     setStatus(status) {
         this.status = status;
         this._reportStatus();
-    }
-
-    getConfiguration() {
-        return {
-            step: {
-                accountId: this.accountId,
-                jobId: this.jobId,
-                name: this.name,
-            },
-            opts: {
-                ...this.opts
-            }
-        }
     }
 }
 

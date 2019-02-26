@@ -18,8 +18,10 @@ class FirebaseTaskLogger extends TaskLogger {
         this.type = TYPES.FIREBASE;
     }
 
-    static async factory(task, {type, baseFirebaseUrl, firebaseSecret}) {
-        const taskLogger = new FirebaseTaskLogger(task, {type, baseFirebaseUrl, firebaseSecret});
+    static async factory(task, opts) {
+        const taskLogger = new FirebaseTaskLogger(task, opts);
+
+        const {baseFirebaseUrl, firebaseSecret} = opts;
 
         if (!baseFirebaseUrl) {
             throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");

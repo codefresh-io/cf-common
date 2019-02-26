@@ -25,7 +25,7 @@ class TaskLogger extends EventEmitter {
         super();
         this.opts = opts;
 
-        if (!accountId) {
+        if (!accountId && !opts.skipAccountValidation) { // skipAccountValidation is only here to allow downloading a launched-composition single step
             throw new CFError(ErrorTypes.Error, "failed to create taskLogger because accountId must be provided");
         }
         this.accountId = accountId;

@@ -93,6 +93,22 @@ class FirebaseStepLogger extends BaseStepLogger {
     async delete() {
         return this.stepRef.remove();
     }
+
+    async getRaw() {
+        var deferred = Promise.defer();
+
+        this.stepRef.once("value", function (snapshot) {
+            var data     = snapshot.val();
+            deferred.resolve(data);
+        }, function (errorObject) {
+            deferred.reject(new CFError({
+                cause: errorObject,
+                message: `could not fetch logs from firebase for step:${this.name}`
+            }));
+        });
+
+        return deferred.promise;
+    }
 }
 
 module.exports = FirebaseStepLogger;
