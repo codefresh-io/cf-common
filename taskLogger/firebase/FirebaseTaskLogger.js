@@ -151,8 +151,8 @@ class FirebaseTaskLogger extends TaskLogger {
         this.baseRef.child('metrics').child('limits').child('memory').push(this.memoryLimit);
     }
 
-    _reportLogSize(size) {
-        this.baseRef.child('metrics').child('logs').child('total').set(size);
+    _reportLogSize() {
+        this.baseRef.child('metrics').child('logs').child('total').set(this.logSize);
     }
 
     _reportVisibility() {

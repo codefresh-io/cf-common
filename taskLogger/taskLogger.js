@@ -5,7 +5,6 @@ const CFError      = require('cf-errors');
 const ErrorTypes   = CFError.errorTypes;
 const EventEmitter = require('events');
 const rp           = require('request-promise');
-const jwt          = require('jsonwebtoken');
 const { STATUS, VISIBILITY, TYPES } = require('./enums');
 
 const stepClasses = {
@@ -84,20 +83,22 @@ class TaskLogger extends EventEmitter {
             }
 
             if (eventReporting) {
-                var event = { action: "new-progress-step", name: name };
-                const headers = {};
-                try {
-                    jwt.decode(eventReporting.token) ? headers['x-access-token'] = eventReporting.token : headers.Authorization = eventReporting.token;
-                } catch (err) {
-                    headers.Authorization = eventReporting.token;
-                }
+                const event = { action: "new-progress-step", name: name };
+
                 rp({
                     uri: eventReporting.url,
-                    headers,
+                    headers: {Authorization: eventReporting.token},
                     method: 'POST',
                     body: event,
                     json: true
-                });
+                })
+                    .catch((err) => {
+                        const error = new CFError({
+                            cause: err,
+                            message: 'Failed to send new-proress-step event'
+                        });
+                        this.emit('error', error);
+                    });
             }
 
         } else if (resetStatus) {
@@ -155,7 +156,8 @@ class TaskLogger extends EventEmitter {
     }
 
     setLogSize(size) {
-        this._reportLogSize(size);
+        this.logSize = size;
+        this._reportLogSize();
     }
 
     setVisibility(visibility) {
