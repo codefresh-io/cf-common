@@ -1,4 +1,4 @@
-const FirebaseTaskLogger = require('./firebase/FirebaseTaskLogger');
+const FirebaseTaskLogger = require('./firebase/TaskLogger');
 
 const factoryMap = {
     [FirebaseTaskLogger.TYPE]: FirebaseTaskLogger.factory

@@ -6,13 +6,13 @@ const debug                            = require('debug')('codefresh:taskLogger'
 const Q                                = require('q');
 const CFError                          = require('cf-errors');
 const ErrorTypes                       = CFError.errorTypes;
-const TaskLogger                       = require('../taskLogger');
+const TaskLogger                       = require('../TaskLogger');
 const StepLogger                       = require('./StepLogger');
 const { TYPES }                        = require('../enums');
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
 
-class TaskLogger extends TaskLogger {
+class FirebaseTaskLogger extends TaskLogger {
     constructor(task, opts) {
         super(task, opts);
         this.type = TYPES.FIREBASE;
@@ -218,4 +218,4 @@ class TaskLogger extends TaskLogger {
 TaskLogger.TYPE          = TYPES.FIREBASE;
 TaskLogger.authenticated = false;
 
-module.exports = TaskLogger;
+module.exports = FirebaseTaskLogger;
