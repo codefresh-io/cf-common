@@ -561,11 +561,12 @@ center-align@^0.1.1:
     align-text "^0.1.3"
     lazy-cache "^1.0.3"
 
-"cf-errors@git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1":
-  version "0.0.4"
-  resolved "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1"
+cf-errors@^0.1.11:
+  version "0.1.11"
+  resolved "https://registry.yarnpkg.com/cf-errors/-/cf-errors-0.1.11.tgz#e0e554dd8d9a916a329822f3a68e01f2f4c7f0cb"
+  integrity sha1-4OVU3Y2akWoymCLzpo4B8vTH8Ms=
   dependencies:
-    verror "^1.6.0"
+    lodash "4.15.0"
 
 chai@^4.2.0:
   version "4.2.0"
@@ -2909,6 +2910,11 @@ lodash@3.7.x:
   version "3.7.0"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-3.7.0.tgz#3678bd8ab995057c07ade836ed2ef087da811d45"
 
+lodash@4.15.0:
+  version "4.15.0"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.15.0.tgz#3162391d8f0140aa22cf8f6b3c34d6b7f63d3aa9"
+  integrity sha1-MWI5HY8BQKoiz49rPDTWt/Y9Oqk=
+
 lodash@4.17.4:
   version "4.17.4"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.4.tgz#78203a4d1c328ae1d86dca6460e369b57f4055ae"
@@ -4740,7 +4746,7 @@ verbal-expressions@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/verbal-expressions/-/verbal-expressions-0.3.0.tgz#492447babfe44dd89802633c4518052617d527b2"
 
-verror@1.10.0, verror@^1.6.0:
+verror@1.10.0:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/verror/-/verror-1.10.0.tgz#3a105ca17053af55d6e270c1f8288682e18da400"
   dependencies:

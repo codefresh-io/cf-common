@@ -3,7 +3,6 @@
 const Q                  = require('q');
 const Firebase           = require('firebase');
 const CFError            = require('cf-errors');
-const ErrorTypes         = CFError.errorTypes;
 const { STATUS }         = require('../enums');
 const BaseStepLogger     = require('../StepLogger');
 
@@ -14,7 +13,7 @@ class FirebaseStepLogger extends BaseStepLogger {
         const {baseFirebaseUrl} = opts;
 
         if (!baseFirebaseUrl) {
-            throw new CFError(ErrorTypes.Error, "failed to create stepLogger because baseFirebaseUrl must be provided");
+            throw new CFError("failed to create stepLogger because baseFirebaseUrl must be provided");
         }
         this.baseFirebaseUrl = baseFirebaseUrl;
 
@@ -78,8 +77,8 @@ class FirebaseStepLogger extends BaseStepLogger {
         this.stepRef.child('metrics').child('cpu').push({ time, usage: cpuUsage });
     }
 
-    _reportLogSize(size) {
-        this.stepRef.child('metrics').child('logs').child('total').set(size);
+    _reportLogSize() {
+        this.stepRef.child('metrics').child('logs').child('total').set(this.logSize);
     }
 
     reportName() {

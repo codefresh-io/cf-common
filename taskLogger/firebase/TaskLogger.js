@@ -5,7 +5,6 @@ const Firebase                         = require('firebase');
 const debug                            = require('debug')('codefresh:taskLogger');
 const Q                                = require('q');
 const CFError                          = require('cf-errors');
-const ErrorTypes                       = CFError.errorTypes;
 const BaseTaskLogger                   = require('../TaskLogger');
 const StepLogger                       = require('./StepLogger');
 const { TYPES }                        = require('../enums');
@@ -24,12 +23,12 @@ class FirebaseTaskLogger extends BaseTaskLogger {
         const {baseFirebaseUrl, firebaseSecret} = opts;
 
         if (!baseFirebaseUrl) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
+            throw new CFError("failed to create taskLogger because baseFirebaseUrl must be provided");
         }
         taskLogger.baseFirebaseUrl = baseFirebaseUrl;
 
         if (!firebaseSecret) {
-            throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase secret reference must be provided");
+            throw new CFError("failed to create taskLogger because Firebase secret reference must be provided");
         }
         taskLogger.firebaseSecret = firebaseSecret;
 
@@ -144,7 +143,7 @@ class FirebaseTaskLogger extends BaseTaskLogger {
     }
 
     _reportMemoryUsage(time, memoryUsage) {
-        this.baseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+        this.baseRef.child('metrics').child('memory').push({time, usage: memoryUsage});
     }
 
     _reportMemoryLimit() {
