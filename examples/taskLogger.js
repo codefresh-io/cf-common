@@ -7,11 +7,10 @@ const main = async () => {
     }, {
         type: TYPES.FIREBASE,
         baseFirebaseUrl: 'https://codefresh-dev.firebaseio.com/development-docker/build-logs',
-        firebaseSecret: ''
+        firebaseSecret: process.env["FIREBASE_SECRET"]
     });
 
     console.log(JSON.stringify(taskLogger.getConfiguration()));
-    return;
 
     taskLogger.reportId();
     taskLogger.reportAccountId();
@@ -52,10 +51,10 @@ const main = async () => {
     }, {
         type: TYPES.FIREBASE,
         baseFirebaseUrl: 'https://codefresh-dev.firebaseio.com/development-docker/build-logs',
-        firebaseSecret: ''
+        firebaseSecret: process.env["FIREBASE_SECRET"]
     });
     await restoredTaskLogger.restore();
-    const restoredStepLogger = restoredTaskLogger.create('stepName');
+    const restoredStepLogger = restoredTaskLogger.create('stepName', undefined, undefined, true);
     restoredStepLogger.write('makore');
 
     restoredTaskLogger.addErrorMessageToEndOfSteps('my error!');
@@ -65,6 +64,76 @@ const main = async () => {
     //await taskLogger.delete();
     //taskLogger.finish();
     //taskLogger.fatalError(new Error('my error'));
+
+
+    const redisTaskLogger = await TaskLogger({
+        accountId: 'accountId',
+        jobId: 'jobId'
+    }, {
+        type: TYPES.REDIS,
+        config: {
+            host: 'local.codefresh.io',
+            password: 'redisPassword',
+            db: 1,
+            port: 6379
+        }
+    });
+
+    redisTaskLogger.reportId();
+    redisTaskLogger.reportAccountId();
+    redisTaskLogger.setVisibility('public');
+    redisTaskLogger.setStatus('running');
+    redisTaskLogger.setMemoryLimit('2');
+    redisTaskLogger.updateMemoryUsage(new Date(), 'sd');
+    redisTaskLogger.setData({key: 'value'});
+
+
+    const stepLoggerRedis = redisTaskLogger.create('stepName', undefined, undefined, true);
+    stepLoggerRedis.start();
+    stepLoggerRedis.write('hey');
+    stepLoggerRedis.reportName();
+    stepLoggerRedis.clearLogs();
+    stepLoggerRedis.setStatus('pending');
+    stepLoggerRedis.start();
+    stepLoggerRedis.write('write');
+    stepLoggerRedis.debug('debug');
+    stepLoggerRedis.warn('warn');
+    stepLoggerRedis.info('info');
+
+    stepLoggerRedis.markPreviouslyExecuted();
+    stepLoggerRedis.markPendingApproval();
+
+    stepLoggerRedis.updateMemoryUsage(new Date().getTime(), 'mem');
+    stepLoggerRedis.updateCpuUsage(new Date().getTime(), 'cpu');
+
+    //stepLogger.markTerminating();
+
+    //stepLogger.finish(new Error('err'));
+    //stepLogger.finish();
+
+    //await stepLogger.delete();
+
+
+    const redisRestoredTaskLogger = await TaskLogger({
+        accountId: 'accountId',
+        jobId: 'jobId'
+    }, {
+        type: TYPES.REDIS,
+        config: {
+            host: 'local.codefresh.io',
+            password: 'redisPassword',
+            db: 1,
+            port: 6379
+        }
+    });
+
+    await redisRestoredTaskLogger.restore();
+    const redisRestoredStepLogger = redisRestoredTaskLogger.create('stepName', undefined, undefined, true);
+    // redisRestoredStepLogger.write('makore');
+
+    // redisRestoredTaskLogger.addErrorMessageToEndOfSteps('my error!');
+
+    // redisTaskLogger.setStatus('success');
 };
 
 main();
