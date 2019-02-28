@@ -15,12 +15,13 @@ class RedisFlattenStrategy {
             while (stack.length !== 0) {
                 key = `${key}:${stack.shift()}`;
             }
+            const timeNow = Date.now();
             const objToPush = {
                 slot: key.substr(this.baseKey.length + 1).replace(new RegExp(':', 'g'), '.'),
                 payload: obj,
                 time: timeNow
             }
-            const timeNow = Date.now();
+            
             redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, timeNow, JSON.stringify(objToPush));
             return timeNow;
         }
