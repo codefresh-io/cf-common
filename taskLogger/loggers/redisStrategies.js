@@ -17,7 +17,8 @@ class RedisFlattenStrategy {
             }
             const objToPush = {
                 slot: key.substr(this.baseKey.length + 1).replace(new RegExp(':', 'g'), '.'),
-                payload: obj
+                payload: obj,
+                time: timeNow
             }
             const timeNow = Date.now();
             redisClient.zadd(`${this.baseKey}:${CONSOLIDATED}`, timeNow, JSON.stringify(objToPush));
