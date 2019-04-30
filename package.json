@@ -1,6 +1,6 @@
 {
   "name": "@codefresh-io/cf-common",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
@@ -29,10 +29,14 @@
   },
   "dependencies": {
     "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1",
+    "cf-logs": "^1.0.0",
     "crypto": "0.0.3",
+    "firebase": "git+https://github.com/codefresh-io/firebase.git#80b2ed883ff281cd67b53bd0f6a0bbd6f330fed5",
     "jsonwebtoken": "^8.4.0",
     "lodash": "^3.10.1",
+    "node-redis-pubsub": "^4.0.0",
     "q": "^1.4.1",
+    "redis": "^2.8.0",
     "request-promise": "^4.2.1"
   }
 }

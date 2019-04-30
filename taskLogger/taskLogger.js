@@ -23,113 +23,139 @@ var STATUS = {
 };
 
 const STEPS_REFERENCES_KEY = 'stepsReferences';
+const LOGS_LOCATION = 'logs';
 
 /**
  * TaskLogger - logging for build/launch/promote jobs
  * @param jobid - progress job id
  * @param firstStepCreationTime - optional. if provided the first step creationTime will be this value
- * @param baseFirebaseUrl - baseFirebaseUrl (pre-quisite authentication to firebase should have been made)
- * @param FirebaseLib - a reference to Firebase lib because we must use the same singelton for pre-quisite authentication
+ * @param loggerImpl - logging implemeations (e.g. : firebase , redis)
  * @returns {{create: create, finish: finish}}
  */
-var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
+var TaskLogger = function (jobId, loggerImpl) {
     var self = this;
     EventEmitter.call(self);
 
     if (!jobId) {
         throw new CFError(ErrorTypes.Error, "failed to create taskLogger because jobId must be provided");
     }
-    else if (!baseFirebaseUrl) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because baseFirebaseUrl must be provided");
+    else if (!loggerImpl) {
+        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because loggerImpl must be provided");
     }
-    else if (!FirebaseLib) {
-        throw new CFError(ErrorTypes.Error, "failed to create taskLogger because Firebase lib reference must be provided");
-    }
+    this.loggerImpl = loggerImpl;
+    this.loggerImpl.start(jobId);
 
-
-    var progressRef = new FirebaseLib(baseFirebaseUrl + jobId);
 
     var fatal    = false;
     var finished = false;
     var steps    = {};
+
     var handlers = {};
 
     const restoreExistingSteps = function () {
-        let settled = false;
-        const deferred = Q.defer();
-        progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
-            const stepsReferences = snapshot.val();
-            if (!stepsReferences) {
-                deferred.resolve();
-            }
+        
+        return Q.resolve().then(() => {
+            
+            //Note !! This is Redis specifc code
+            return self.loggerImpl.child(STEPS_REFERENCES_KEY).getHash();
 
-            Q.all(_.map(stepsReferences, (name, key) => {
-                const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
-                const step = {
-                    logs: {},
-                    firebaseRef: stepRef
-                };
-
-                const nameDeferred = Q.defer();
-                const statusDeferred = Q.defer();
-
-                stepRef.child('name').once('value', (snapshot) => {
-                    step.name = snapshot.val();
-                    nameDeferred.resolve();
-                });
-                stepRef.child('status').once('value', (snapshot) => {
-                    step.status = snapshot.val();
-                    if (step.status === STATUS.PENDING_APPROVAL) {
-                        step.pendingApproval = true;
+        }).then((keyToStatus) => {
+            if (keyToStatus) {
+                const stepFromRedis = Object.keys(keyToStatus);
+                steps = stepFromRedis.reduce((acc, current) => {
+                    acc[current] = {
+                        status: keyToStatus[current],
+                        name: current,
+                        ...(keyToStatus[current] === STATUS.PENDING_APPROVAL && {pendingApproval : true})
                     }
-                    statusDeferred.resolve();
-                });
-
-                return Q.all([nameDeferred.promise, statusDeferred.promise])
-                    .then(() => {
-                        steps[step.name] = step;
-                    });
-            }))
-                .then(() => {
-                    settled = true;
-                    deferred.resolve();
-                })
-                .done();
-        });
-
-        setTimeout(() => {
-            if (!settled) {
-                deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
+                    return acc;
+                    
+                },{});
             }
-        }, 5000);
-        return deferred.promise;
+        }).thenResolve();
+        
+        // let settled = false;
+        // const deferred = Q.defer();
+        // progressRef.child(STEPS_REFERENCES_KEY).once("value", function (snapshot) {
+        //     const stepsReferences = snapshot.val();
+        //     if (!stepsReferences) {
+        //         deferred.resolve();
+        //     }
+
+        //     Q.all(_.map(stepsReferences, (name, key) => {
+        //         const stepRef     = new FirebaseLib(baseFirebaseUrl + jobId + `/steps/${key}`);
+        //         const step = {
+        //             logs: {},
+        //             firebaseRef: stepRef
+        //         };
+
+        //         const nameDeferred = Q.defer();
+        //         const statusDeferred = Q.defer();
+
+        //         stepRef.child('name').once('value', (snapshot) => {
+        //             step.name = snapshot.val();
+        //             nameDeferred.resolve();
+        //         });
+        //         stepRef.child('status').once('value', (snapshot) => {
+        //             step.status = snapshot.val();
+        //             if (step.status === STATUS.PENDING_APPROVAL) {
+        //                 step.pendingApproval = true;
+        //             }
+        //             statusDeferred.resolve();
+        //         });
+
+        //         return Q.all([nameDeferred.promise, statusDeferred.promise])
+        //             .then(() => {
+        //                 steps[step.name] = step;
+        //             });
+        //     }))
+        //         .then(() => {
+        //             settled = true;
+        //             deferred.resolve();
+        //         })
+        //         .done();
+        // });
+
+        // setTimeout(() => {
+        //     if (!settled) {
+        //         deferred.reject(new Error('Failed to restore steps metadata from Firebase'));
+        //     }
+        // }, 5000);
+        // return deferred.promise;
+        
     };
 
-    var updateCurrentStepReferences = function () {
-        const stepsReferences = {};
-        _.forEach(steps, (step) => {
-            stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
-        });
-        progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
-    };
+    // var updateCurrentStepReferences = function () {
+    //     const stepsReferences = {};
+    //     _.forEach(steps, (step) => {
+    //         stepsReferences[_.last(step.firebaseRef.toString().split('/'))] = step.name;
+    //     });
+    //     progressRef.child(STEPS_REFERENCES_KEY).set(stepsReferences);
+    // };
 
     var addErrorMessageToEndOfSteps = function (message) {
-        var deferred = Q.defer();
+        // var deferred = Q.defer();
 
-        var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
-        stepsRef.limitToLast(1).once('value', function (snapshot) {
-            try {
-                _.forEach(snapshot.val(), function(step, stepKey) {
-                    var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
-                    stepRef.child('logs').push(`\x1B[31m${message}\x1B[0m\r\n`);
-                });
-                deferred.resolve();
-            } catch (err) {
-                deferred.reject(err);
+        // var stepsRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/");
+        // stepsRef.limitToLast(1).once('value', function (snapshot) {
+        //     try {
+        //         _.forEach(snapshot.val(), function(step, stepKey) {
+        //             var stepRef = new FirebaseLib(baseFirebaseUrl + jobId + "/steps/" + stepKey);
+        //             stepRef.child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
+        //         });
+        //         deferred.resolve();
+        //     } catch (err) {
+        //         deferred.reject(err);
+        //     }
+        // });
+
+        // return deferred.promise;
+        return Q.resolve().then(() => {
+            const steps = self.loggerImpl.child('steps').children();
+            if (steps && steps.length > 0) {
+                steps[steps.length -1].child(LOGS_LOCATION).push(`\x1B[31m${message}\x1B[0m\r\n`);
             }
-        });
-
-        return deferred.promise;
+        })        
     };
 
     var create = function (name, eventReporting, resetStatus) {
@@ -165,22 +191,11 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             step = {
                 name: name,
                 status: STATUS.PENDING,
-                logs: {}
+                index: Object.keys(steps).length
             };
 
-            steps[name]      = step;
-            var stepsRef     = new FirebaseLib(baseFirebaseUrl + jobId + "/steps");
-            step.firebaseRef = stepsRef.push(step);
-
-            step.firebaseRef.on("value", function (snapshot) {
-                var val = snapshot.val();
-                if (val && val.name === name) {
-                    step.firebaseRef.off("value");
-                    self.emit("step-pushed", name);
-                    updateCurrentStepReferences();
-                }
-            });
-
+            
+            initStep(step, true);
             if (eventReporting) {
                 var event = { action: "new-progress-step", name: name };
                 const headers = {};
@@ -198,12 +213,15 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 });
             }
 
-        } else if (resetStatus) {
-            step.status = STATUS.PENDING;
-            step.firebaseRef.child('creationTimeStamp').set('');
-            step.firebaseRef.child('finishTimeStamp').set('');
-            step.firebaseRef.child('status').set(step.status);
-        }
+        } else {
+            initStep(step);
+            if (resetStatus) {
+                step.status = STATUS.PENDING;
+                step.writter.child('creationTimeStamp').set('');
+                step.writter.child('finishTimeStamp').set('');
+                step.writter.child('status').set(step.status);
+            }
+    }
 
         handlers[name] = {
             start: function () {
@@ -212,30 +230,39 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 if (step.status === STATUS.PENDING) {
                     step.status = STATUS.RUNNING;
-                    step.firebaseRef.child('status').set(step.status);
-                    step.firebaseRef.child('finishTimeStamp').set('');
-                    step.firebaseRef.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
+                    step.writter.child('status').set(step.status);
+                    step.writter.child('finishTimeStamp').set('');
+                    step.writter.child('creationTimeStamp').set(+(new Date().getTime() / 1000).toFixed());
+                }
+            },
+            resume: function () {
+                if (fatal) {
+                    return;
+                }
+                if (step.status === STATUS.PENDING_APPROVAL) {
+                    step.status = STATUS.RUNNING;
+                    step.writter.child('status').set(step.status);
                 }
             },
             getReference: function () {
-                return step.firebaseRef.toString();
+                return step.writter.toString();
             },
             getLogsReference: function () {
-                return step.firebaseRef.child('logs').toString();
+                return step.writter.child(LOGS_LOCATION).toString();
             },
             getLastUpdateReference: function () {
-                return progressRef.child('lastUpdate').toString();
+                return self.loggerImpl.child('lastUpdate').toString();
             },
             getMetricsLogsReference: function () {
-                return step.firebaseRef.child('metrics').child('logs').toString();
+                return step.writter.child('metrics').child(LOGS_LOCATION).toString();
             },
             write: function (message) {
                 if (fatal) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child(LOGS_LOCATION).push(message);
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -247,8 +274,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -260,8 +287,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(`\x1B[01;93m${message}\x1B[0m\r\n`);
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child(LOGS_LOCATION).push(`\x1B[01;93m${message}\x1B[0m\r\n`);
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -273,8 +300,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                     return;
                 }
                 if ([STATUS.RUNNING, STATUS.PENDING, STATUS.PENDING_APPROVAL, STATUS.TERMINATING].includes(step.status)) {
-                    step.firebaseRef.child("logs").push(message + '\r\n');
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    step.writter.child(LOGS_LOCATION).push(message + '\r\n');
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                 }
                 else {
                     self.emit("error",
@@ -300,11 +327,13 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                         step.status = STATUS.SKIPPED;
                     }
                     if (err && err.toString() !== 'Error') {
-                        step.firebaseRef.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
+                        step.writter.child("logs").push(`\x1B[31m${err.toString()}\x1B[0m\r\n`);
                     }
 
-                    step.firebaseRef.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
-                    progressRef.child("lastUpdate").set(new Date().getTime());
+                    // step.writter.update({ status: step.status, finishTimeStamp: step.finishTimeStamp });
+                    step.writter.child('status').set(step.status);
+                    step.writter.child('finishTimeStamp').set(step.finishTimeStamp);
+                    self.loggerImpl.child("lastUpdate").set(new Date().getTime());
                     delete handlers[name];
                 }
                 else {
@@ -320,12 +349,15 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
             getStatus: function() {
                 return step.status;
             },
+            getName: function() {
+                return step.name;
+            },
             markPreviouslyExecuted: function() {
                 if (fatal) {
                     return;
                 }
 
-                step.firebaseRef.child('previouslyExecuted').set(true);
+                step.writter.child('previouslyExecuted').set(true);
             },
             markPendingApproval: function() {
                 if (fatal) {
@@ -334,19 +366,19 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
 
                 step.status = STATUS.PENDING_APPROVAL;
                 step.pendingApproval = true;
-                step.firebaseRef.child('status').set(step.status);
+                step.writter.child('status').set(step.status);
                 delete handlers[name];
             },
             updateMemoryUsage: function (time, memoryUsage) {
-                step.firebaseRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+                step.writter.child('metrics').child('memory').push({time, usage:memoryUsage});
             },
             updateCpuUsage: function (time, cpuUsage) {
-                step.firebaseRef.child('metrics').child('cpu').push({time, usage:cpuUsage});
+                step.writter.child('metrics').child('cpu').push({time, usage:cpuUsage});
             },
             markTerminating: function() {
                 if (step.status === STATUS.RUNNING) {
                     step.status = STATUS.TERMINATING;
-                    step.firebaseRef.child('status').set(step.status);
+                    step.writter.child('status').set(step.status);
                 }
                 else {
                     self.emit("error",
@@ -391,17 +423,40 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
     };
 
     var getMetricsLogsReference = function () {
-        return progressRef.child('metrics').child('logs').toString();
+        return self.loggerImpl.child('metrics').child(LOGS_LOCATION).toString();
     };
 
     const updateMemoryUsage = function (time, memoryUsage) {
-        progressRef.child('metrics').child('memory').push({time, usage:memoryUsage});
+        self.loggerImpl.child('metrics').child('memory').push({time, usage:memoryUsage});
     };
 
     const setMemoryLimit = function (limitMemory) {
         const limit = limitMemory.replace('Mi','');
-        progressRef.child('metrics').child('limits').child('memory').push(limit);
+        self.loggerImpl.child('metrics').child('limits').child('memory').push(limit);
     };
+
+    const initStep = function(step, fullInit) {
+        
+        const writter = self.loggerImpl.attachStep(step);
+        const name = step.name;
+        if (fullInit) {
+            writter.push(step);
+            steps[step.name] = step;
+            self.loggerImpl.child(STEPS_REFERENCES_KEY).push({
+                [name] : step.status
+            });
+            self.emit("step-pushed", name);
+        } 
+        step.writter = writter;
+        //Note : watch only watch for local changes , what happen on remote change (e.g. api) ?
+        step.writter.child('status').watch((value) => {
+            self.loggerImpl.child(STEPS_REFERENCES_KEY).child(step.name).set(value);
+        });
+    }
+
+    const getLogger = function () {
+        return self.loggerImpl;
+    }
 
     return {
         restoreExistingSteps: restoreExistingSteps,
@@ -413,7 +468,8 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
         on: self.on.bind(self),
         steps: steps, // for testing purposes solely
         updateMemoryUsage: updateMemoryUsage,
-        setMemoryLimit: setMemoryLimit
+        setMemoryLimit: setMemoryLimit,
+        getLogger: getLogger
     };
 
 };
