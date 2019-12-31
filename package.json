@@ -1,6 +1,6 @@
 {
   "name": "@codefresh-io/cf-common",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
@@ -31,7 +31,7 @@
     "cf-errors": "git+https://github.com/codefresh-io/cf-errors.git#3ca76e5d303364021c453e3a95d3117874ef75b1",
     "crypto": "0.0.3",
     "jsonwebtoken": "^8.4.0",
-    "lodash": "^3.10.1",
+    "lodash": "^4.17.15",
     "q": "^1.4.1",
     "request-promise": "^4.2.1"
   }
