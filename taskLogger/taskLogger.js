@@ -2,7 +2,7 @@
 
 var _            = require('lodash');
 var CFError      = require('cf-errors');
-var ErrorTypes   = CFError.errorTypes;
+var ErrorTypes   = CFError.Errors;
 var EventEmitter = require('events');
 var util         = require('util');
 var rp           = require('request-promise');
