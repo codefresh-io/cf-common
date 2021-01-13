@@ -239,7 +239,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 else {
                     self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'write' handler was triggered after the job finished with message: %s", message));
+                        new CFError(ErrorTypes.Error, `progress-logs 'write' handler was triggered after the job finished with message: ${message}`));
                 }
             },
             debug: function (message) {
@@ -252,7 +252,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 else {
                     self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'debug' handler was triggered after the job finished with message: %s", message));
+                        new CFError(ErrorTypes.Error, `progress-logs 'debug' handler was triggered after the job finished with message: ${message}`));
                 }
             },
             warn: function (message) {
@@ -265,7 +265,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 else {
                     self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'warning' handler was triggered after the job finished with message: %s", message));
+                        new CFError(ErrorTypes.Error, `progress-logs 'warning' handler was triggered after the job finished with message: ${message}`));
                 }
             },
             info: function (message) {
@@ -278,7 +278,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 else {
                     self.emit("error",
-                        new CFError(ErrorTypes.Error, "progress-logs 'info' handler was triggered after the job finished with message: %s", message));
+                        new CFError(ErrorTypes.Error, `progress-logs 'info' handler was triggered after the job finished with message: ${message}`));
                 }
             },
             finish: function (err, skip) {
@@ -310,7 +310,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 else {
                     if (err) {
                         self.emit("error",
-                            new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished with err: %s", err.toString()));
+                            new CFError(ErrorTypes.Error, `progress-logs 'finish' handler was triggered after the job finished with err: ${err.toString()}`));
                     }
                     else {
                         self.emit("error", new CFError(ErrorTypes.Error, "progress-logs 'finish' handler was triggered after the job finished"));
@@ -350,7 +350,7 @@ var TaskLogger = function (jobId, baseFirebaseUrl, FirebaseLib) {
                 }
                 else {
                     self.emit("error",
-                        new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status , current status : ${step.status}`));
+                        new CFError(ErrorTypes.Error, `markTerminating is only allowed to step in running state status, current status : ${step.status}`));
                 }
 
             }
