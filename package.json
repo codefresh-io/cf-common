@@ -29,7 +29,7 @@
     "cf-errors": "^0.1.15",
     "crypto": "0.0.3",
     "jsonwebtoken": "^8.4.0",
-    "lodash": "4.17.20",
+    "lodash": "4.17.21",
     "q": "^1.4.1",
     "request-promise": "4.2.6"
   }
