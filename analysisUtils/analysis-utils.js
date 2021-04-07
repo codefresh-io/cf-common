@@ -3,6 +3,10 @@ var Q       = require('q');
 var _       = require('lodash');
 
 function removeImageOwnerUnsupportedChars(owner){
+    if (!_.isString(tag)) {
+        console.error(`owner should be type of String, instead got ${typeof owner}`);
+        return '';
+    }
     owner = owner.toLowerCase();
     return owner.replace(/[^a-z0-9]+/g, "");
 }
@@ -10,6 +14,10 @@ function removeImageOwnerUnsupportedChars(owner){
 var removeImageNameUnsupportedChars = removeImageOwnerUnsupportedChars;
 
 function removeImageTagUnsupportedChars(tag){
+    if (!_.isString(tag)) {
+        console.error(`tag should be type of String, instead got ${typeof tag}`);
+        return '';
+    }
     return tag.replace(/[^a-zA-Z0-9_.-]+/g, "").replace(/^[.-]*/, "");
 }
 

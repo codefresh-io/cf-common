@@ -1,11 +1,16 @@
 {
   "name": "@codefresh-io/cf-common",
-  "version": "0.0.10",
+  "version": "1.0.0",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codefresh-io/cf-common.git"
+  },
+  "homepage": "https://github.com/codefresh-io/cf-common",
   "author": "Codefresh <admin@codefresh.io> (http://codefresh.io)",
   "license": "ISC",
   "devDependencies": {
