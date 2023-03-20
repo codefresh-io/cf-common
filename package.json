@@ -31,7 +31,7 @@
     "sinon-chai": "^2.8.0"
   },
   "dependencies": {
-    "cf-errors": "^0.1.16",
+    "cf-errors": "^0.1.17",
     "jsonwebtoken": "^8.4.0",
     "lodash": "^4.17.21",
     "q": "^1.4.1",
