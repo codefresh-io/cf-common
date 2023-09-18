@@ -1,6 +1,6 @@
 {
   "name": "@codefresh-io/cf-common",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "common modules for codefresh runtime and api",
   "main": "index.js",
   "scripts": {
@@ -13,6 +13,9 @@
   "homepage": "https://github.com/codefresh-io/cf-common",
   "author": "Codefresh <admin@codefresh.io> (http://codefresh.io)",
   "license": "ISC",
+  "resolutions": {
+    "graceful-fs": "^4.2.11"
+  },
   "devDependencies": {
     "chai": "^3.0.0",
     "gulp": "^3.9.1",
@@ -32,7 +35,7 @@
   },
   "dependencies": {
     "cf-errors": "^0.1.16",
-    "jsonwebtoken": "^8.4.0",
+    "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "q": "^1.4.1",
     "request-promise": "^4.2.6"

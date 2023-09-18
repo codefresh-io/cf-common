@@ -8,7 +8,7 @@ steps:
 
   RunningUnitTests:
     title: Running Unit Tests
-    image: codefresh/node-tester-image:10.13.0
+    image: quay.io/codefresh/node-tester-image:14.21.1
     commands:
     - yarn install
     - yarn global add gulp
