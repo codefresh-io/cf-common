@@ -13,6 +13,9 @@
   "homepage": "https://github.com/codefresh-io/cf-common",
   "author": "Codefresh <admin@codefresh.io> (http://codefresh.io)",
   "license": "ISC",
+  "resolutions": {
+    "graceful-fs": "^4.2.11"
+  },
   "devDependencies": {
     "chai": "^3.0.0",
     "gulp": "^3.9.1",
